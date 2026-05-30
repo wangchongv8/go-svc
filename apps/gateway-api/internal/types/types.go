@@ -3,6 +3,30 @@
 
 package types
 
+type CreateOrderReq struct {
+	UserID    int64 `json:"user_id"`
+	ProductID int64 `json:"product_id"`
+	Quantity  int64 `json:"quantity"`
+}
+
+type CreateProductReq struct {
+	Name        string `json:"name"`
+	Description string `json:"description,optional"`
+	PriceCents  int64  `json:"price_cents"`
+}
+
+type GetOrderReq struct {
+	ID int64 `path:"id"`
+}
+
+type GetProductReq struct {
+	ID int64 `path:"id"`
+}
+
+type GetStockReq struct {
+	ProductID int64 `path:"product_id"`
+}
+
 type GetUserReq struct {
 	ID int64 `path:"id"`
 }
@@ -16,6 +40,18 @@ type HealthzResp struct {
 	Status string `json:"status"`
 }
 
+type ListProductsResp struct {
+	Products []ProductResp `json:"products"`
+}
+
+type ListUserOrdersReq struct {
+	UserID int64 `path:"user_id"`
+}
+
+type ListUserOrdersResp struct {
+	Orders []OrderResp `json:"orders"`
+}
+
 type LoginReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -23,6 +59,25 @@ type LoginReq struct {
 
 type LoginResp struct {
 	ID int64 `json:"id"`
+}
+
+type OrderResp struct {
+	ID              int64  `json:"id"`
+	UserID          int64  `json:"user_id"`
+	ProductID       int64  `json:"product_id"`
+	Quantity        int64  `json:"quantity"`
+	UnitPriceCents  int64  `json:"unit_price_cents"`
+	TotalPriceCents int64  `json:"total_price_cents"`
+	Status          string `json:"status"`
+	CreatedAt       int64  `json:"created_at"`
+}
+
+type ProductResp struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PriceCents  int64  `json:"price_cents"`
+	Status      string `json:"status"`
 }
 
 type RegisterReq struct {
@@ -33,4 +88,19 @@ type RegisterReq struct {
 type RegisterResp struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
+}
+
+type SetProductStatusReq struct {
+	ID     int64  `path:"id"`
+	Status string `json:"status"`
+}
+
+type SetStockReq struct {
+	ProductID int64 `path:"product_id"`
+	Stock     int64 `json:"stock"`
+}
+
+type StockResp struct {
+	ProductID int64 `json:"product_id"`
+	Stock     int64 `json:"stock"`
 }

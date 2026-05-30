@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package product;
+
+option go_package = "./product";
+
+message CreateProductRequest {
+    string name        = 1;
+    string description = 2;
+    int64  price_cents = 3;
+}
+
+message CreateProductResponse {
+    int64  id          = 1;
+    string name        = 2;
+    string description = 3;
+    int64  price_cents = 4;
+    string status      = 5;
+}
+
+message GetProductRequest {
+    int64 id = 1;
+}
+
+message GetProductResponse {
+    int64  id          = 1;
+    string name        = 2;
+    string description = 3;
+    int64  price_cents = 4;
+    string status      = 5;
+}
+
+message ListProductsRequest {}
+
+message ListProductsResponse {
+    repeated GetProductResponse products = 1;
+}
+
+message SetProductStatusRequest {
+    int64  id     = 1;
+    string status = 2;
+}
+
+message SetProductStatusResponse {
+    int64  id          = 1;
+    string name        = 2;
+    string description = 3;
+    int64  price_cents = 4;
+    string status      = 5;
+}
+
+service ProductRpc {
+    rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+    rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+    rpc SetProductStatus(SetProductStatusRequest) returns (SetProductStatusResponse);
+}

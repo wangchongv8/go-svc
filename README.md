@@ -32,7 +32,7 @@
 | Phase 0 | ✅ 完成 | 项目脚手架和文档体系 |
 | Phase 1 | ✅ 完成 | 最小 Go HTTP 服务 + Makefile + 测试 |
 | Phase 2 | ✅ 完成 | go-zero API + gRPC (gateway-api ↔ user-rpc) |
-| Phase 3 | 📋 待开始 | 多服务业务闭环 + PostgreSQL |
+| Phase 3 | ✅ 完成 | 多服务业务闭环 + PostgreSQL (product/inventory/order) |
 
 ## 当前决策
 
@@ -140,7 +140,50 @@ curl http://localhost:8080/api/v1/users/1
 | Unauthenticated | 401 | `{"error":"invalid password"}` |
 | NotFound | 404 | `{"error":"user not found"}` |
 | AlreadyExists | 409 | `{"error":"username already exists"}` |
+| FailedPrecondition | 400 | `{"error":"stock insufficient"}` |
 | Internal | 500 | `{"error":"internal error"}` |
+
+## Phase 3: 多服务业务闭环 + PostgreSQL
+
+已接入 PostgreSQL，新增 product-rpc、inventory-rpc、order-rpc。
+
+### API 端点（新增）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/products` | 创建商品 |
+| GET | `/api/v1/products` | 商品列表 |
+| GET | `/api/v1/products/:id` | 商品详情 |
+| PATCH | `/api/v1/products/:id/status` | 商品上下架 |
+| PUT | `/api/v1/inventories/:product_id` | 设置/更新库存 |
+| GET | `/api/v1/inventories/:product_id` | 查询库存 |
+| POST | `/api/v1/orders` | 创建订单 |
+| GET | `/api/v1/orders/:id` | 订单详情 |
+| GET | `/api/v1/users/:user_id/orders` | 用户订单列表 |
+
+### 下单 curl 示例
+
+```bash
+curl -X POST localhost:8080/api/v1/products \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Keyboard","price_cents":19900}'
+
+curl -X PUT localhost:8080/api/v1/inventories/1 \
+  -H 'Content-Type: application/json' -d '{"stock":10}'
+
+curl -X POST localhost:8080/api/v1/orders \
+  -H 'Content-Type: application/json' \
+  -d '{"user_id":1,"product_id":1,"quantity":2}'
+
+curl localhost:8080/api/v1/orders/1
+curl localhost:8080/api/v1/users/1/orders
+```
+
+### 已知限制
+
+- **事务边界**：扣库存/写订单分离，失败时库存已扣但订单未创建（后续 Phase 补偿）。
+- **集成测试**：推迟到 Phase 4 Docker Compose。
+- **user_id 校验**：order-rpc 校验 user_id > 0，非法返回 InvalidArgument。
 
 ### Makefile 命令
 
@@ -149,5 +192,9 @@ curl http://localhost:8080/api/v1/users/1
 | `make fmt` | 格式化所有 Go 代码 |
 | `make test` | 运行所有测试 |
 | `make run-user-rpc` | 启动 user-rpc (gRPC :9000) |
+| `make run-product-rpc` | 启动 product-rpc (gRPC :9001) |
+| `make run-inventory-rpc` | 启动 inventory-rpc (gRPC :9002) |
+| `make run-order-rpc` | 启动 order-rpc (gRPC :9003) |
 | `make run-gateway-api` | 启动 gateway-api (HTTP :8080) |
 | `make gen` | 从 .api 和 .proto 重新生成代码 |
+| `make db-migrate` | 执行 SQL 迁移 (需本地 PostgreSQL) |

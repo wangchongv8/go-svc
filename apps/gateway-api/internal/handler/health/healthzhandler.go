@@ -15,11 +15,11 @@ import (
 func HealthzHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := health.NewHealthzLogic(r.Context(), svcCtx)
-		resp, err := l.Healthz()
+		err := l.Healthz()
 		if err != nil {
 			httperr.Write(w, err)
 		} else {
-			httpx.OkJsonCtx(r.Context(), w, resp)
+			httpx.OkJson(w, map[string]string{"status": "ok"})
 		}
 	}
 }

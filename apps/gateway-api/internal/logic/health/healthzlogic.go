@@ -8,7 +8,6 @@ import (
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"go-svc/apps/gateway-api/internal/svc"
-	"go-svc/apps/gateway-api/internal/types"
 )
 
 type HealthzLogic struct {
@@ -25,6 +24,8 @@ func NewHealthzLogic(ctx context.Context, svcCtx *svc.ServiceContext) *HealthzLo
 	}
 }
 
-func (l *HealthzLogic) Healthz() (*types.HealthzResp, error) {
-	return &types.HealthzResp{Status: "ok"}, nil
+func (l *HealthzLogic) Healthz() error {
+	// todo: add your logic here and delete this line
+
+	return nil
 }

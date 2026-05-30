@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "./order";
+
+message CreateOrderRequest {
+    int64 user_id    = 1;
+    int64 product_id = 2;
+    int64 quantity   = 3;
+}
+
+message CreateOrderResponse {
+    int64  id                = 1;
+    int64  user_id           = 2;
+    int64  product_id        = 3;
+    int64  quantity          = 4;
+    int64  unit_price_cents  = 5;
+    int64  total_price_cents = 6;
+    string status            = 7;
+    int64  created_at        = 8;
+}
+
+message GetOrderRequest {
+    int64 id = 1;
+}
+
+message GetOrderResponse {
+    int64  id                = 1;
+    int64  user_id           = 2;
+    int64  product_id        = 3;
+    int64  quantity          = 4;
+    int64  unit_price_cents  = 5;
+    int64  total_price_cents = 6;
+    string status            = 7;
+    int64  created_at        = 8;
+}
+
+message ListUserOrdersRequest {
+    int64 user_id = 1;
+}
+
+message ListUserOrdersResponse {
+    repeated GetOrderResponse orders = 1;
+}
+
+service OrderRpc {
+    rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+    rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+    rpc ListUserOrders(ListUserOrdersRequest) returns (ListUserOrdersResponse);
+}

@@ -4,3 +4,12 @@ Port: 8080
 
 UserRpcConf:
   Target: "127.0.0.1:9000"
+
+ProductRpcConf:
+  Target: "127.0.0.1:9001"
+
+InventoryRpcConf:
+  Target: "127.0.0.1:9002"
+
+OrderRpcConf:
+  Target: "127.0.0.1:9003"

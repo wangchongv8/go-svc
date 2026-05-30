@@ -7,6 +7,7 @@ info (
 	version: "v1"
 )
 
+// ---------- user types ----------
 type (
 	RegisterReq {
 		Username string `json:"username"`
@@ -35,6 +36,76 @@ type (
 	}
 )
 
+// ---------- product types ----------
+type (
+	CreateProductReq {
+		Name        string `json:"name"`
+		Description string `json:"description,optional"`
+		PriceCents  int64  `json:"price_cents"`
+	}
+	ProductResp {
+		ID          int64  `json:"id"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		PriceCents  int64  `json:"price_cents"`
+		Status      string `json:"status"`
+	}
+	ListProductsResp {
+		Products []ProductResp `json:"products"`
+	}
+	SetProductStatusReq {
+		ID     int64  `path:"id"`
+		Status string `json:"status"`
+	}
+	GetProductReq {
+		ID int64 `path:"id"`
+	}
+)
+
+// ---------- inventory types ----------
+type (
+	SetStockReq {
+		ProductID int64 `path:"product_id"`
+		Stock     int64 `json:"stock"`
+	}
+	GetStockReq {
+		ProductID int64 `path:"product_id"`
+	}
+	StockResp {
+		ProductID int64 `json:"product_id"`
+		Stock     int64 `json:"stock"`
+	}
+)
+
+// ---------- order types ----------
+type (
+	CreateOrderReq {
+		UserID    int64 `json:"user_id"`
+		ProductID int64 `json:"product_id"`
+		Quantity  int64 `json:"quantity"`
+	}
+	GetOrderReq {
+		ID int64 `path:"id"`
+	}
+	ListUserOrdersReq {
+		UserID int64 `path:"user_id"`
+	}
+	OrderResp {
+		ID              int64  `json:"id"`
+		UserID          int64  `json:"user_id"`
+		ProductID       int64  `json:"product_id"`
+		Quantity        int64  `json:"quantity"`
+		UnitPriceCents  int64  `json:"unit_price_cents"`
+		TotalPriceCents int64  `json:"total_price_cents"`
+		Status          string `json:"status"`
+		CreatedAt       int64  `json:"created_at"`
+	}
+	ListUserOrdersResp {
+		Orders []OrderResp `json:"orders"`
+	}
+)
+
+// ---------- service blocks ----------
 @server (
 	prefix: /api/v1
 	group:  user
@@ -48,6 +119,51 @@ service gateway-api {
 
 	@handler getUser
 	get /users/:id (GetUserReq) returns (GetUserResp)
+}
+
+@server (
+	prefix: /api/v1
+	group:  product
+)
+service gateway-api {
+	@handler createProduct
+	post /products (CreateProductReq) returns (ProductResp)
+
+	@handler listProducts
+	get /products returns (ListProductsResp)
+
+	@handler getProduct
+	get /products/:id (GetProductReq) returns (ProductResp)
+
+	@handler setProductStatus
+	patch /products/:id/status (SetProductStatusReq) returns (ProductResp)
+}
+
+@server (
+	prefix: /api/v1
+	group:  inventory
+)
+service gateway-api {
+	@handler setStock
+	put /inventories/:product_id (SetStockReq) returns (StockResp)
+
+	@handler getStock
+	get /inventories/:product_id (GetStockReq) returns (StockResp)
+}
+
+@server (
+	prefix: /api/v1
+	group:  order
+)
+service gateway-api {
+	@handler createOrder
+	post /orders (CreateOrderReq) returns (OrderResp)
+
+	@handler getOrder
+	get /orders/:id (GetOrderReq) returns (OrderResp)
+
+	@handler listUserOrders
+	get /users/:user_id/orders (ListUserOrdersReq) returns (ListUserOrdersResp)
 }
 
 @server (

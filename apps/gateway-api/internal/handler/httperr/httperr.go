@@ -9,6 +9,7 @@ import (
 )
 
 // Write writes a JSON error response based on the gRPC status code.
+// Non-gRPC errors are mapped to 400 Bad Request (for request parse errors etc).
 func Write(w http.ResponseWriter, err error) {
 	st := status.Convert(err)
 	httpStatus := codeToHTTP(st.Code())
@@ -20,6 +21,8 @@ func Write(w http.ResponseWriter, err error) {
 
 func codeToHTTP(c codes.Code) int {
 	switch c {
+	case codes.Unknown:
+		return http.StatusBadRequest
 	case codes.InvalidArgument, codes.FailedPrecondition, codes.OutOfRange:
 		return http.StatusBadRequest
 	case codes.NotFound:

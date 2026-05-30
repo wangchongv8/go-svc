@@ -8,7 +8,6 @@ import (
 
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
-	userclient "go-svc/apps/user-rpc/userrpc"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -28,16 +27,7 @@ func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Register
 }
 
 func (l *RegisterLogic) Register(req *types.RegisterReq) (resp *types.RegisterResp, err error) {
-	rpcResp, err := l.svcCtx.UserRpc.Register(l.ctx, &userclient.RegisterRequest{
-		Username: req.Username,
-		Password: req.Password,
-	})
-	if err != nil {
-		return nil, err
-	}
+	// todo: add your logic here and delete this line
 
-	return &types.RegisterResp{
-		ID:       rpcResp.Id,
-		Username: rpcResp.Username,
-	}, nil
+	return
 }

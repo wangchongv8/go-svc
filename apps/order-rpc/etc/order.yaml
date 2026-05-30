@@ -1,0 +1,10 @@
+Name: order.rpc
+ListenOn: 0.0.0.0:9003
+
+Dsn: "postgres://postgres:postgres@localhost:5432/go_svc?sslmode=disable"
+
+ProductRpcConf:
+  Target: "127.0.0.1:9001"
+
+InventoryRpcConf:
+  Target: "127.0.0.1:9002"

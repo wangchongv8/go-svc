@@ -7,6 +7,9 @@ import (
 	"net/http"
 
 	health "go-svc/apps/gateway-api/internal/handler/health"
+	inventory "go-svc/apps/gateway-api/internal/handler/inventory"
+	order "go-svc/apps/gateway-api/internal/handler/order"
+	product "go-svc/apps/gateway-api/internal/handler/product"
 	user "go-svc/apps/gateway-api/internal/handler/user"
 	"go-svc/apps/gateway-api/internal/svc"
 
@@ -22,6 +25,69 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: health.HealthzHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPut,
+				Path:    "/inventories/:product_id",
+				Handler: inventory.SetStockHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/inventories/:product_id",
+				Handler: inventory.GetStockHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/orders",
+				Handler: order.CreateOrderHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/orders/:id",
+				Handler: order.GetOrderHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/users/:user_id/orders",
+				Handler: order.ListUserOrdersHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/products",
+				Handler: product.CreateProductHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/products",
+				Handler: product.ListProductsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/products/:id",
+				Handler: product.GetProductHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPatch,
+				Path:    "/products/:id/status",
+				Handler: product.SetProductStatusHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
