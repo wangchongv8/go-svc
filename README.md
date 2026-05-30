@@ -25,6 +25,15 @@
 3. 然后把任务拆进 `docs/claude-implementation-plan.md`，交给 Claude Code 小步实现。
 4. 每完成一个阶段，使用 `docs/review-checklist.md` 做 review。
 
+## 阶段记录
+
+| 阶段 | 状态 | 内容 |
+|------|------|------|
+| Phase 0 | ✅ 完成 | 项目脚手架和文档体系 |
+| Phase 1 | ✅ 完成 | 最小 Go HTTP 服务 + Makefile + 测试 |
+| Phase 2 | ✅ 完成 | go-zero API + gRPC (gateway-api ↔ user-rpc) |
+| Phase 3 | 📋 待开始 | 多服务业务闭环 + PostgreSQL |
+
 ## 当前决策
 
 - 业务主题：轻量电商下单系统。
@@ -34,23 +43,59 @@
 - 本地服务发现：Docker Compose 阶段可以用 etcd 学习 go-zero 服务注册与发现。
 - Kubernetes 服务发现：优先使用 Kubernetes Service + DNS，不让业务服务直接依赖 etcd。
 
-## Phase 1: 最小 Go HTTP 服务（已完成）
+## Phase 2: go-zero API + RPC 基础（已完成）
 
-当前阶段已实现一个最小 Go HTTP 服务，作为后续 `gateway-api` 的前身。
+已引入 go-zero 框架，创建 gateway-api（HTTP）和 user-rpc（gRPC），实现 API 调用 RPC 的完整链路。
 
 ### 目录结构
 
 ```
 .
-├── cmd/gateway/main.go          # 服务入口
-├── internal/gateway/
-│   ├── handler.go               # HealthzHandler
-│   └── handler_test.go          # 测试
+├── apps/
+│   ├── gateway-api/              # go-zero HTTP API 服务
+│   │   ├── gateway.api           # API DSL 定义
+│   │   ├── gateway.go            # 入口 (goctl 生成)
+│   │   ├── etc/gateway-api.yaml  # 运行时配置
+│   │   └── internal/
+│   │       ├── config/config.go  # 配置结构体
+│   │       ├── handler/          # HTTP handler
+│   │       ├── logic/            # 业务逻辑（调用 RPC）
+│   │       ├── svc/              # ServiceContext (DI)
+│   │       └── types/            # 请求/响应类型
+│   └── user-rpc/                 # go-zero gRPC 服务
+│       ├── user.proto            # Protobuf 定义
+│       ├── user.go               # 入口 (goctl 生成)
+│       ├── etc/user.yaml         # 运行时配置
+│       ├── user/                 # protoc 生成的 pb 文件
+│       ├── userrpc/              # gRPC 客户端 stub
+│       ├── model/userstore.go    # 内存用户存储
+│       └── internal/
+│           ├── config/config.go
+│           ├── logic/            # RPC 方法实现
+│           ├── server/           # gRPC server 注册
+│           └── svc/              # ServiceContext (DI)
 ├── docs/
 ├── Makefile
 ├── go.mod
 └── README.md
 ```
+
+### 服务关系
+
+```
+curl → gateway-api (:8080, HTTP)
+         └── user-rpc (:9000, gRPC)
+                └── UserStore (in-memory)
+```
+
+### API 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/healthz` | 健康检查 |
+| POST | `/api/v1/register` | 用户注册 |
+| POST | `/api/v1/login` | 用户登录 |
+| GET | `/api/v1/users/:id` | 获取用户信息 |
 
 ### 快速开始
 
@@ -61,20 +106,41 @@ make fmt
 # 运行测试
 make test
 
-# 启动服务（默认监听 8080）
-make run
+# 终1：启动 user-rpc (gRPC :9000)
+make run-user-rpc
 
-# 自定义端口
-PORT=9090 make run
-```
+# 终端 2：启动 gateway-api (HTTP :8080)
+make run-gateway-api
 
-### 验证
-
-```bash
-# 启动服务后，在另一个终端执行：
+# 终端 3：验证
 curl http://localhost:8080/healthz
-# 预期输出: {"status":"ok"}
+# → {"status":"ok"}
+
+curl -X POST http://localhost:8080/api/v1/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"123456"}'
+# → {"id":1,"username":"alice"}
+
+curl -X POST http://localhost:8080/api/v1/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"123456"}'
+# → {"id":1}
+
+curl http://localhost:8080/api/v1/users/1
+# → {"id":1,"username":"alice"}
 ```
+
+### 错误响应
+
+业务错误统一返回 JSON，HTTP 状态码由 gRPC status code 映射：
+
+| gRPC Code | HTTP Status | 示例 |
+|-----------|-------------|------|
+| InvalidArgument | 400 | `{"error":"username must not be empty"}` |
+| Unauthenticated | 401 | `{"error":"invalid password"}` |
+| NotFound | 404 | `{"error":"user not found"}` |
+| AlreadyExists | 409 | `{"error":"username already exists"}` |
+| Internal | 500 | `{"error":"internal error"}` |
 
 ### Makefile 命令
 
@@ -82,4 +148,6 @@ curl http://localhost:8080/healthz
 | --- | --- |
 | `make fmt` | 格式化所有 Go 代码 |
 | `make test` | 运行所有测试 |
-| `make run` | 启动 gateway 服务 |
+| `make run-user-rpc` | 启动 user-rpc (gRPC :9000) |
+| `make run-gateway-api` | 启动 gateway-api (HTTP :8080) |
+| `make gen` | 从 .api 和 .proto 重新生成代码 |

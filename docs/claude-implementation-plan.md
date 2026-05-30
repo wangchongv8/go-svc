@@ -104,7 +104,7 @@ Claude Code 执行提示词：
 
 ## Phase 2: go-zero API + RPC 基础
 
-状态：待 Phase 1 review 后细化。
+状态：已完成。
 
 目标：
 

@@ -1,0 +1,60 @@
+syntax = "v1"
+
+info (
+	title:   "gateway-api"
+	desc:    "Gateway API for e-commerce system"
+	author:  "go-svc"
+	version: "v1"
+)
+
+type (
+	RegisterReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	RegisterResp {
+		ID       int64  `json:"id"`
+		Username string `json:"username"`
+	}
+	LoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	LoginResp {
+		ID int64 `json:"id"`
+	}
+	GetUserReq {
+		ID int64 `path:"id"`
+	}
+	GetUserResp {
+		ID       int64  `json:"id"`
+		Username string `json:"username"`
+	}
+	HealthzResp {
+		Status string `json:"status"`
+	}
+)
+
+@server (
+	prefix: /api/v1
+	group:  user
+)
+service gateway-api {
+	@handler register
+	post /register (RegisterReq) returns (RegisterResp)
+
+	@handler login
+	post /login (LoginReq) returns (LoginResp)
+
+	@handler getUser
+	get /users/:id (GetUserReq) returns (GetUserResp)
+}
+
+@server (
+	group: health
+)
+service gateway-api {
+	@handler healthz
+	get /healthz
+}
+

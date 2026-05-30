@@ -3,3 +3,5 @@
 bin/
 *.test
 *_test.test
+__debug_bin*
+**/__debug_bin*
