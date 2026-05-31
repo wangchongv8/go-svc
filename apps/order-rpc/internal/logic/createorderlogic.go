@@ -49,6 +49,7 @@ func (l *CreateOrderLogic) CreateOrder(in *order.CreateOrderRequest) (*order.Cre
 		Quantity:  in.Quantity,
 	})
 	if err != nil {
+		l.Errorw("stock deduct failed", logx.Field("product_id", in.ProductId), logx.Field("user_id", in.UserId))
 		return nil, err
 	}
 
@@ -62,9 +63,14 @@ func (l *CreateOrderLogic) CreateOrder(in *order.CreateOrderRequest) (*order.Cre
 	}
 	created, err := l.svcCtx.Repository.Create(l.ctx, o)
 	if err != nil {
-		// Known limitation: stock already deducted, order write failed
 		return nil, rpcError(err)
 	}
+
+	l.Infow("order created",
+		logx.Field("order_id", created.ID),
+		logx.Field("user_id", created.UserID),
+		logx.Field("product_id", created.ProductID),
+		logx.Field("total_price_cents", created.TotalPriceCents))
 
 	return toOrderResponse(created), nil
 }

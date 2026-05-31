@@ -35,6 +35,7 @@
 | Phase 3 | ✅ 完成 | 多服务业务闭环 + PostgreSQL (product/inventory/order) |
 | Phase 4 | ✅ 完成 | Docker Compose 本地集群 |
 | Phase 5 | ✅ 完成 | Kubernetes 部署 (kind + GHCR) |
+| Phase 6 | ✅ 完成 | 可观测性 (日志 + 指标 + Trace) |
 
 ## 当前决策
 
@@ -205,6 +206,7 @@ curl localhost:8080/api/v1/users/1/orders
 | `make compose-logs` | 查看 Compose 日志 |
 | `make compose-ps` | 查看 Compose 服务状态 |
 | `make e2e-compose` | 端到端集成验证 (Docker Compose) |
+| `make verify-observability-compose` | 验证 Compose 可观测性 |
 | `make k8s-build` | 构建 K8s Docker 镜像 (GHCR tag) |
 | `make k8s-push` | 推送镜像到 GHCR |
 | `make k8s-kind-load` | 加载镜像到 kind 集群 |
@@ -213,6 +215,7 @@ curl localhost:8080/api/v1/users/1/orders
 | `make k8s-logs` | 查看 K8s Pod 日志 |
 | `make k8s-port-forward` | 端口转发 gateway-api :8080 |
 | `make e2e-k8s` | 端到端集成验证 (K8s) |
+| `make verify-observability-k8s` | 验证 K8s 可观测性 |
 
 ## Phase 4: Docker Compose 本地集群
 
@@ -291,3 +294,32 @@ UserRpcConf:
 ```
 
 详见 [deploy/k8s/README.md](deploy/k8s/README.md)
+
+## Phase 6: 可观测性
+
+为所有服务接入结构化日志、Prometheus 指标和 Jaeger 链路追踪。
+
+### 观测组件
+
+| 组件 | 地址 | 说明 |
+|------|------|------|
+| Prometheus | http://localhost:9090 | 指标采集 (Compose 直接暴露) |
+| Grafana | http://localhost:3000 | 指标可视化 |
+| Jaeger | http://localhost:16686 | 链路追踪查询 |
+| DevServer | :6060/metrics | 每服务自曝 metrics |
+
+### 验证
+
+```bash
+bash scripts/verify-observability-compose.sh
+```
+
+### K8s 环境
+
+```bash
+kubectl port-forward -n go-svc svc/prometheus 9090:9090
+kubectl port-forward -n go-svc svc/grafana 3000:3000
+kubectl port-forward -n go-svc svc/jaeger 16686:16686
+```
+
+详见 [deploy/observability/README.md](deploy/observability/README.md)

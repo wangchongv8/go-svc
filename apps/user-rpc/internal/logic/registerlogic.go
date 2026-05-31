@@ -29,6 +29,8 @@ func (l *RegisterLogic) Register(in *user.RegisterRequest) (*user.RegisterRespon
 		return nil, rpcError(err)
 	}
 
+	l.Infow("user registered", logx.Field("user_id", u.ID), logx.Field("username", u.Username))
+
 	return &user.RegisterResponse{
 		Id:       u.ID,
 		Username: u.Username,

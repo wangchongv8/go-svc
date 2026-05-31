@@ -1,4 +1,4 @@
-.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s k8s-down
+.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose verify-observability-compose k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s verify-observability-k8s k8s-down
 
 fmt:
 	go fmt ./...
@@ -59,6 +59,9 @@ compose-ps:
 e2e-compose:
 	./scripts/e2e-compose.sh
 
+verify-observability-compose:
+	./scripts/verify-observability-compose.sh
+
 # Kubernetes commands
 K8S_NAMESPACE ?= go-svc
 KIND_CLUSTER ?= go-svc
@@ -66,11 +69,11 @@ IMAGE_REGISTRY ?= ghcr.io/wangchongv8
 IMAGE_TAG ?= phase5
 
 k8s-build:
-	docker build --build-arg SERVICE_MAIN=apps/user-rpc/user.go --build-arg SERVICE_CONF_DIR=apps/user-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
-	docker build --build-arg SERVICE_MAIN=apps/product-rpc/product.go --build-arg SERVICE_CONF_DIR=apps/product-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-product-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
-	docker build --build-arg SERVICE_MAIN=apps/inventory-rpc/inventory.go --build-arg SERVICE_CONF_DIR=apps/inventory-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-inventory-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
-	docker build --build-arg SERVICE_MAIN=apps/order-rpc/order.go --build-arg SERVICE_CONF_DIR=apps/order-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-order-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
-	docker build --build-arg SERVICE_MAIN=apps/gateway-api/gateway.go --build-arg SERVICE_CONF_DIR=apps/gateway-api/etc -t $(IMAGE_REGISTRY)/go-svc-gateway-api:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
+	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/user-rpc/user.go --build-arg SERVICE_CONF_DIR=apps/user-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
+	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/product-rpc/product.go --build-arg SERVICE_CONF_DIR=apps/product-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-product-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
+	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/inventory-rpc/inventory.go --build-arg SERVICE_CONF_DIR=apps/inventory-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-inventory-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
+	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/order-rpc/order.go --build-arg SERVICE_CONF_DIR=apps/order-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-order-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
+	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/gateway-api/gateway.go --build-arg SERVICE_CONF_DIR=apps/gateway-api/etc -t $(IMAGE_REGISTRY)/go-svc-gateway-api:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
 
 k8s-push:
 	@for svc in user-rpc product-rpc inventory-rpc order-rpc gateway-api; do \
@@ -98,6 +101,7 @@ k8s-up:
 	kubectl apply -f deploy/k8s/order-rpc.yaml
 	kubectl apply -f deploy/k8s/gateway-api.yaml
 	kubectl apply -f deploy/k8s/ingress.yaml
+	kubectl apply -f deploy/k8s/observability.yaml
 	@echo "Waiting for pods..."
 	@for app in user-rpc product-rpc inventory-rpc order-rpc gateway-api; do \
 		kubectl wait --for=condition=ready pod -l app=$$app -n $(K8S_NAMESPACE) --timeout=60s; \
@@ -115,6 +119,9 @@ k8s-port-forward:
 
 e2e-k8s:
 	./scripts/e2e-k8s.sh
+
+verify-observability-k8s:
+	./scripts/verify-observability-k8s.sh
 
 k8s-down:
 	kubectl delete namespace $(K8S_NAMESPACE)

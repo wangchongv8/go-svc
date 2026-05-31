@@ -6,6 +6,24 @@ metadata:
   namespace: go-svc
 data:
   gateway-api.k8s.yaml: |
+    Log:
+      Mode: console
+      Encoding: json
+      Level: info
+      Stat: true
+    DevServer:
+      Enable: true
+      Host: 0.0.0.0
+      Port: 6060
+      MetricsPath: /metrics
+      HealthPath: /healthz
+      EnableMetrics: true
+      EnablePprof: true
+    Telemetry:
+      Name: gateway-api
+      Endpoint: jaeger:4317
+      Sampler: 1.0
+      Batcher: otlpgrpc
     Name: gateway-api
     Host: 0.0.0.0
     Port: 8080
@@ -30,6 +48,9 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
+    - name: metrics
+      port: 6060
+      targetPort: 6060
 ---
 apiVersion: apps/v1
 kind: Deployment

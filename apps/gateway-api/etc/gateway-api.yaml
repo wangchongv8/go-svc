@@ -13,3 +13,9 @@ InventoryRpcConf:
 
 OrderRpcConf:
   Target: "127.0.0.1:9003"
+
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true

@@ -9,3 +9,24 @@ InventoryRpcConf:
   Target: "inventory-rpc:9002"
 OrderRpcConf:
   Target: "order-rpc:9003"
+
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true
+
+DevServer:
+  Enable: true
+  Host: 0.0.0.0
+  Port: 6060
+  MetricsPath: /metrics
+  HealthPath: /healthz
+  EnableMetrics: true
+  EnablePprof: true
+
+Telemetry:
+  Name: gateway-api
+  Endpoint: jaeger:4317
+  Sampler: 1.0
+  Batcher: otlpgrpc

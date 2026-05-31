@@ -22,6 +22,9 @@ spec:
   ports:
     - port: 9001
       targetPort: 9001
+    - name: metrics
+      port: 6060
+      targetPort: 6060
 ---
 apiVersion: apps/v1
 kind: Deployment

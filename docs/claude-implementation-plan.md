@@ -671,16 +671,320 @@ make k8s-down
 
 ## Phase 6: 可观测性
 
-状态：待需求确认后细化。
+状态：已完成。
 
 目标：
 
-- 增加结构化日志。
-- 增加 Prometheus 指标。
-- 增加链路追踪。
-- 提供 Grafana 或 Jaeger 使用说明。
+- 为 5 个业务服务和 gateway-api 增加最小可观测性闭环。
+- 使用 go-zero 原生 `Log`、`DevServer`、`Telemetry` 配置，避免手写一套观测框架。
+- 暴露 Prometheus `/metrics`。
+- 接入 Jaeger/OpenTelemetry trace。
+- 在 Docker Compose 和 Kubernetes 两种部署形态中都能验证指标和链路追踪。
+- 提供 Prometheus、Grafana、Jaeger 的本地访问说明。
 
-建议验收命令待补充。
+不做：
+
+- 不新增业务功能。
+- 不引入 ELK/Loki/Tempo/OpenSearch 等日志平台。
+- 不做生产级告警规则、SLO、Grafana 完整 dashboard。
+- 不改造为 service mesh。
+- 不引入 Helm。
+- 不要求目标机器必须长期运行观测组件；学习环境可随 `compose-down` / `k8s-down` 一起清理。
+
+### Phase 6 设计原则
+
+- 优先使用 go-zero 已有能力：
+  - `Log`：结构化 JSON 日志。
+  - `DevServer`：暴露 `/metrics`、`/healthz`、pprof。
+  - `Telemetry`：OpenTelemetry trace exporter。
+- 观测组件以学习可见性为主，资源占用要小。
+- Compose 作为最容易完整验证的环境。
+- K8s 作为部署形态验证：能部署 Prometheus/Jaeger，能 port-forward 查看。
+- 日志本阶段只要求输出结构化 JSON 到 stdout，由 Docker/K8s 收集，不上日志平台。
+
+### Phase 6 推荐目录
+
+```text
+deploy/
+├── observability/
+│   ├── README.md
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   └── grafana/
+│       ├── provisioning/
+│       │   └── datasources/
+│       │       └── prometheus.yml
+│       └── dashboards/
+│           └── go-svc-overview.json   # 可选，简单即可
+├── k8s/
+│   ├── observability.yaml
+│   └── ...
+scripts/
+├── verify-observability-compose.sh
+└── verify-observability-k8s.sh
+```
+
+如果 Grafana dashboard 工作量过大，可以只提供 datasource provisioning 和 README 查询说明，不强制做复杂 dashboard。
+
+### Phase 6 服务配置要求
+
+所有服务配置文件都要补充可观测性配置：
+
+```yaml
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true
+
+DevServer:
+  Enabled: true
+  Host: 0.0.0.0
+  Port: 6060
+  MetricsPath: /metrics
+  HealthPath: /healthz
+  EnableMetrics: true
+  EnablePprof: true
+
+Telemetry:
+  Name: <service-name>
+  Endpoint: <trace-endpoint>
+  Sampler: 1.0
+  Batcher: otlpgrpc
+```
+
+说明：
+
+- 本地 `*.yaml` 可以不配置 `Telemetry.Endpoint`，避免未启动 Jaeger 时本地服务启动失败或刷错误。
+- Compose 配置使用 `Endpoint: jaeger:4317`。
+- K8s 配置使用 `Endpoint: jaeger:4317` 或同 namespace 下的 Jaeger Service 名。
+- 每个 Pod 内部都可以使用 `DevServer.Port: 6060`，K8s Service 通过 named port 暴露 metrics。
+- Docker Compose 内部 Prometheus 通过服务名抓取 `service:6060`，不要求把所有 6060 映射到宿主机。
+
+需要更新的配置文件：
+
+```text
+apps/gateway-api/etc/gateway-api.yaml
+apps/gateway-api/etc/gateway-api.compose.yaml
+apps/gateway-api/etc/gateway-api.k8s.yaml
+apps/user-rpc/etc/user.yaml
+apps/user-rpc/etc/user.compose.yaml
+apps/user-rpc/etc/user.k8s.yaml
+apps/product-rpc/etc/product.yaml
+apps/product-rpc/etc/product.compose.yaml
+apps/product-rpc/etc/product.k8s.yaml
+apps/inventory-rpc/etc/inventory.yaml
+apps/inventory-rpc/etc/inventory.compose.yaml
+apps/inventory-rpc/etc/inventory.k8s.yaml
+apps/order-rpc/etc/order.yaml
+apps/order-rpc/etc/order.compose.yaml
+apps/order-rpc/etc/order.k8s.yaml
+```
+
+### Phase 6 Docker Compose 要求
+
+更新 `deploy/docker-compose/docker-compose.yml`：
+
+- 增加 `prometheus` 服务。
+- 增加 `grafana` 服务。
+- 增加 `jaeger` 服务。
+- Prometheus 使用 `deploy/observability/prometheus/prometheus.yml`。
+- Grafana 默认暴露 `3000:3000`。
+- Prometheus 默认暴露 `9090:9090`。
+- Jaeger UI 默认暴露 `16686:16686`。
+- Jaeger OTLP gRPC 暴露给 Compose 网络内服务使用 `4317`。
+
+Prometheus scrape targets 至少包含：
+
+```yaml
+- targets:
+    - gateway-api:6060
+    - user-rpc:6060
+    - product-rpc:6060
+    - inventory-rpc:6060
+    - order-rpc:6060
+```
+
+建议访问地址：
+
+```text
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3000
+Jaeger:     http://localhost:16686
+```
+
+### Phase 6 Kubernetes 要求
+
+更新 K8s manifests：
+
+- 每个业务 Service 增加 metrics port：
+
+```yaml
+- name: metrics
+  port: 6060
+  targetPort: 6060
+```
+
+- 每个业务 Deployment 暴露 `containerPort: 6060`。
+- 新增 `deploy/k8s/observability.yaml`，包含：
+  - Prometheus ConfigMap。
+  - Prometheus Deployment + Service。
+  - Grafana Deployment + Service。
+  - Jaeger Deployment + Service。
+- `make k8s-up` 应 apply `observability.yaml`，或提供 `make k8s-observability-up`。建议默认 apply，便于学习闭环。
+- 资源 requests/limits 要小，适合 minikube。
+
+K8s 访问方式：
+
+```bash
+kubectl port-forward -n go-svc svc/prometheus 9090:9090
+kubectl port-forward -n go-svc svc/grafana 3000:3000
+kubectl port-forward -n go-svc svc/jaeger 16686:16686
+```
+
+如果用户不想长期运行观测组件，`make k8s-down` 删除 namespace 即可清理。
+
+### Phase 6 日志要求
+
+- 所有服务 stdout 输出 JSON 日志。
+- 业务关键路径补充少量有意义日志，不要刷屏：
+  - 用户注册/登录成功或失败。
+  - 商品创建。
+  - 设置库存。
+  - 创建订单成功、库存不足。
+- 日志字段应包含必要业务 ID，例如 `user_id`、`product_id`、`order_id`。
+- 不记录明文密码、token 或敏感信息。
+- 使用 go-zero `logx.WithContext(ctx)` / `logx.Infow` / `logx.Errorw` 等本地风格，不引入新的日志库。
+
+### Phase 6 指标要求
+
+最低要求：
+
+- 每个服务 `/metrics` 可访问。
+- Prometheus target 页面能看到 5 个业务服务 + gateway-api 为 UP。
+- API 请求后 metrics 中能看到 HTTP/RPC 请求计数或延迟相关指标。
+
+可选增强：
+
+- 增加少量业务指标，例如：
+  - `go_svc_order_created_total`
+  - `go_svc_order_stock_insufficient_total`
+
+如果实现业务指标，必须放在独立包中，例如 `pkg/observability/metrics`，避免散落在 logic 文件里。
+
+### Phase 6 Trace 要求
+
+最低要求：
+
+- gateway-api 收到 HTTP 请求后能生成 trace。
+- gateway-api 调用 user/product/inventory/order RPC 时 trace 能向下传播。
+- order-rpc 调 product-rpc / inventory-rpc 时 trace 能继续传播。
+- Jaeger UI 能查询到至少一个跨服务 trace。
+
+实现建议：
+
+- 优先使用 go-zero 的 `Telemetry` 配置。
+- Compose/K8s 使用 OTLP gRPC exporter，Endpoint 指向 `jaeger:4317`。
+- 不手写 OpenTelemetry SDK 初始化，除非 go-zero 原生配置无法满足。
+
+### Phase 6 Makefile
+
+至少新增：
+
+- `make obs-compose-urls`
+- `make obs-k8s-port-forward`
+- `make verify-observability-compose`
+- `make verify-observability-k8s`
+
+说明：
+
+- `obs-compose-urls` 打印 Prometheus/Grafana/Jaeger 本地访问地址。
+- `obs-k8s-port-forward` 可以同时或分别提示 port-forward 命令，不要求复杂进程管理。
+- `verify-observability-compose` 检查：
+  - Prometheus `/api/v1/targets` 可访问。
+  - Jaeger UI 可访问。
+  - gateway-api `/healthz` 可访问。
+  - 至少一个 metrics endpoint 可访问。
+- `verify-observability-k8s` 检查：
+  - Prometheus/Grafana/Jaeger Service 存在。
+  - 业务服务 metrics port 存在。
+  - 如启动 port-forward，必须用 trap 清理。
+
+### Phase 6 验收命令
+
+基础验证：
+
+```bash
+make fmt
+make test
+git diff --check
+make gen
+docker compose -f deploy/docker-compose/docker-compose.yml config
+kubectl apply --dry-run=client -f deploy/k8s/
+```
+
+Compose 验证：
+
+```bash
+make compose-up
+make e2e-compose
+make verify-observability-compose
+make compose-down
+```
+
+K8s 验证：
+
+```bash
+make k8s-up
+make e2e-k8s
+make verify-observability-k8s
+make k8s-down
+```
+
+如果本机没有可用 K8s API Server：
+
+- 说明 `kubectl dry-run` / `make k8s-up` 未执行或失败原因。
+- 至少运行 YAML 语法解析检查。
+
+### Phase 6 Claude Code 执行提示词
+
+```text
+请在当前仓库实现 docs/claude-implementation-plan.md 中的 Phase 6。
+
+要求：
+- 严格遵循 Phase 6 说明。
+- 本阶段只实现可观测性：结构化日志、Prometheus 指标、Jaeger/OpenTelemetry trace、相关 Compose/K8s 部署和文档。
+- 不实现新业务功能，不引入 Redis、etcd、消息队列、Helm、service mesh。
+- 优先使用 go-zero 原生 Log、DevServer、Telemetry 配置，不要重新发明观测框架。
+- 所有服务配置补充 Log、DevServer；Compose/K8s 配置补充 Telemetry endpoint。
+- Docker Compose 增加 prometheus、grafana、jaeger，并提供 Prometheus scrape 配置。
+- Kubernetes 增加 observability.yaml，并让业务 Service 暴露 metrics port 6060。
+- 日志只输出到 stdout，使用 JSON 编码，不引入日志平台。
+- 如增加业务指标，集中放到 pkg/observability/metrics，不要散落。
+- 新增或更新 Makefile 目标：obs-compose-urls、obs-k8s-port-forward、verify-observability-compose、verify-observability-k8s。
+- 更新 README 和 deploy/observability/README.md，说明如何访问 Prometheus/Grafana/Jaeger，如何验证 metrics 和 trace。
+- 保持 Phase 4 Compose、Phase 5 K8s 现有验证能力不回退。
+- 实现后运行 make fmt、make test、git diff --check、make gen。
+- 如果 Docker 可用，运行 docker compose -f deploy/docker-compose/docker-compose.yml config。
+- 如果可启动 Compose，运行 make compose-up、make e2e-compose、make verify-observability-compose、make compose-down。
+- 如果 kubectl 可用，运行 kubectl apply --dry-run=client -f deploy/k8s/；如果没有可用集群导致失败，说明原因。
+- 如果 K8s 可用，运行 make k8s-up、make e2e-k8s、make verify-observability-k8s、make k8s-down。
+- 验证结束后必须清理 Compose/K8s/port-forward 进程，并复查 8080、9000、9001、9002、9003、5432、9090、3000、16686 无异常监听。
+- 回复中列出修改文件、验证命令、结果和未完成事项。
+```
+
+### Phase 6 Review 重点
+
+- 是否使用 go-zero 原生配置而不是引入重复框架。
+- 所有服务是否都有 JSON 日志、DevServer `/metrics`、Compose/K8s trace endpoint。
+- Prometheus scrape targets 是否覆盖 gateway-api 和 4 个 RPC 服务。
+- Compose 是否能一键启动观测组件。
+- K8s `observability.yaml` 是否资源清晰、端口一致、适合 minikube。
+- `verify-observability-*` 是否能验证 metrics/trace 基础可用性。
+- port-forward 或后台进程是否有 trap 清理。
+- 日志是否避免记录密码等敏感信息。
+- Phase 4/5 原有命令是否没有回退。
+- 验证后是否清理进程并复查端口。
 
 ## Claude Code Prompt 模板
 

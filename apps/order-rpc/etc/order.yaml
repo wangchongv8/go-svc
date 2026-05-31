@@ -8,3 +8,9 @@ ProductRpcConf:
 
 InventoryRpcConf:
   Target: "127.0.0.1:9002"
+
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true

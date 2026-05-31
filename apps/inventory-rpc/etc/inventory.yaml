@@ -2,3 +2,9 @@ Name: inventory.rpc
 ListenOn: 0.0.0.0:9002
 
 Dsn: "postgres://postgres:postgres@localhost:5432/go_svc?sslmode=disable"
+
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true

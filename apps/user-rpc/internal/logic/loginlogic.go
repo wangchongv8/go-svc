@@ -31,9 +31,11 @@ func (l *LoginLogic) Login(in *user.LoginRequest) (*user.LoginResponse, error) {
 	}
 
 	if u.Password != in.Password {
+		l.Errorw("login failed: invalid password", logx.Field("username", in.Username))
 		return nil, rpcError(model.ErrInvalidPassword)
 	}
 
+	l.Infow("login success", logx.Field("user_id", u.ID))
 	return &user.LoginResponse{
 		Id: u.ID,
 	}, nil

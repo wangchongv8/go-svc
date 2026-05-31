@@ -29,6 +29,8 @@ func (l *CreateProductLogic) CreateProduct(in *product.CreateProductRequest) (*p
 		return nil, rpcError(err)
 	}
 
+	l.Infow("product created", logx.Field("product_id", p.ID), logx.Field("name", p.Name))
+
 	return &product.CreateProductResponse{
 		Id:          p.ID,
 		Name:        p.Name,

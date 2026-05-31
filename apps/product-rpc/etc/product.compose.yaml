@@ -1,3 +1,24 @@
 Name: product.rpc
 ListenOn: 0.0.0.0:9001
 Dsn: "postgres://postgres:postgres@postgres:5432/go_svc?sslmode=disable"
+
+Log:
+  Mode: console
+  Encoding: json
+  Level: info
+  Stat: true
+
+DevServer:
+  Enable: true
+  Host: 0.0.0.0
+  Port: 6060
+  MetricsPath: /metrics
+  HealthPath: /healthz
+  EnableMetrics: true
+  EnablePprof: true
+
+Telemetry:
+  Name: product.rpc
+  Endpoint: jaeger:4317
+  Sampler: 1.0
+  Batcher: otlpgrpc
