@@ -32,12 +32,12 @@ Docker Compose 本地集群主体可用：
 
 - 本阶段预期策略是：本地不保留 PostgreSQL 数据，每次通过 migration 回放重建干净环境。
 - 当前 `Makefile` 和 README 已符合这个策略。
-- `docs/claude-implementation-plan.md` 中仍保留了早期“PostgreSQL 使用 volume 持久化数据”和“compose-down 默认不删除 volume”的建议。
+- `docs/claude-implementation-plan.md` 已同步为不使用 volume 持久化，`compose-down -v` 清理数据。
 
 建议：
 
-- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为”本地 Compose 环境每次清空数据，通过 db-migrate 重建”。✅ 已完成
-- 保留当前 `compose-down -v` 行为即可，不需要新增 `compose-clean`。✅ 已完成
+- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为”本地 Compose 环境每次清空数据，通过 db-migrate 重建”。（已完成）
+- 保留当前 `compose-down -v` 行为即可，不需要新增 `compose-clean`。（已完成）
 
 ## 验证结果
 
