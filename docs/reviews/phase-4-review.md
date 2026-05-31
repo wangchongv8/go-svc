@@ -36,8 +36,8 @@ Docker Compose 本地集群主体可用：
 
 建议：
 
-- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为“本地 Compose 环境每次清空数据，通过 db-migrate 重建”。
-- 保留当前 `compose-down -v` 行为即可，不需要新增 `compose-clean`。
+- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为”本地 Compose 环境每次清空数据，通过 db-migrate 重建”。✅ 已完成
+- 保留当前 `compose-down -v` 行为即可，不需要新增 `compose-clean`。✅ 已完成
 
 ## 验证结果
 
@@ -71,20 +71,3 @@ make compose-down
 
 - 验证结束后已执行 `make compose-down`。
 - 已复查 `8080`、`9000`、`9001`、`9002`、`9003`、`5432`，均无监听进程。
-
-## 建议同步给 Claude Code 的文档同步 Prompt
-
-```text
-请根据 docs/reviews/phase-4-review.md 同步 Phase 4 文档约定。
-
-要求：
-- 不进入 Phase 5。
-- 保持 Docker Compose 集群当前已通过的功能链路不回退。
-- 保持当前每次本地 Compose 环境不保留 PostgreSQL 数据的策略。
-- 保持当前 compose-down -v 行为。
-- 更新 docs/claude-implementation-plan.md，移除或改写 Phase 4 中 PostgreSQL volume 持久化、compose-clean 的建议，和 README 保持一致。
-- 运行 make fmt、make test、git diff --check、make gen。
-- 如果 Docker 可用，运行 make compose-up、make compose-ps、make e2e-compose、make compose-down。
-- 验证结束后必须停止容器，并复查 8080、9000、9001、9002、9003、5432 无监听。
-- 回复中列出修改文件、验证命令、结果和未完成事项。
-```
