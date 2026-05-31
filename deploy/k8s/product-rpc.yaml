@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-rpc-config
+  namespace: go-svc
+data:
+  product.k8s.yaml: |
+    Name: product.rpc
+    ListenOn: 0.0.0.0:9001
+    Dsn: "postgres://postgres:postgres@postgres:5432/go_svc?sslmode=disable"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-rpc
+  namespace: go-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: product-rpc
+  ports:
+    - port: 9001
+      targetPort: 9001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-rpc
+  namespace: go-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-rpc
+  template:
+    metadata:
+      labels:
+        app: product-rpc
+    spec:
+      containers:
+        - name: product-rpc
+          image: ghcr.io/wangchongv8/go-svc-product-rpc:phase5
+          imagePullPolicy: IfNotPresent
+          command: ["/app/bin", "-f", "/app/etc/product.k8s.yaml"]
+          volumeMounts:
+            - name: config
+              mountPath: /app/etc/product.k8s.yaml
+              subPath: product.k8s.yaml
+          readinessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          livenessProbe:
+            tcpSocket:
+              port: 9001
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: config
+          configMap:
+            name: product-rpc-config

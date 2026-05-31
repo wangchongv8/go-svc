@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-migrate-sql
+  namespace: go-svc
+data:
+  001_phase3_schema.sql: |
+    CREATE TABLE IF NOT EXISTS products (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL DEFAULT '',
+        price_cents BIGINT NOT NULL CHECK (price_cents > 0),
+        status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS inventories (
+        product_id BIGINT PRIMARY KEY,
+        stock BIGINT NOT NULL CHECK (stock >= 0),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS orders (
+        id BIGSERIAL PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        product_id BIGINT NOT NULL,
+        quantity BIGINT NOT NULL CHECK (quantity > 0),
+        unit_price_cents BIGINT NOT NULL CHECK (unit_price_cents > 0),
+        total_price_cents BIGINT NOT NULL CHECK (total_price_cents > 0),
+        status TEXT NOT NULL CHECK (status IN ('created')),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: go-svc
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -U postgres -d go_svc; do
+                echo "waiting for postgres..."
+                sleep 2
+              done
+      containers:
+        - name: migrate
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          command:
+            - psql
+            - -h
+            - postgres
+            - -U
+            - postgres
+            - -d
+            - go_svc
+            - -f
+            - /sql/001_phase3_schema.sql
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+      volumes:
+        - name: sql
+          configMap:
+            name: db-migrate-sql

@@ -369,15 +369,305 @@ make compose-down
 
 ## Phase 5: Kubernetes 部署
 
-状态：待需求确认后细化。
+状态：已完成。
 
 目标：
 
-- 增加 K8s manifests。
-- 覆盖 Deployment、Service、ConfigMap、Secret。
-- 提供本地 kind 或 minikube 验证说明。
+- 将 Phase 4 的 Docker Compose 本地集群迁移到 Kubernetes manifests。
+- 使用 Kubernetes Service + DNS 做服务发现，不让业务服务直接依赖 etcd。
+- 覆盖 Namespace、Deployment、Service、ConfigMap、Secret、Job、Ingress。
+- 支持两种部署路径：本地 kind 验证，以及通过 GHCR 将镜像发布到另一台电脑上的 Kubernetes 环境。
+- 如果本机没有 kind/Kubernetes，也要能做 YAML 静态校验。
+- 保持本地学习环境可重复：PostgreSQL 不做持久化，每次重建后通过 migration Job 初始化 schema。
+- 复用 Phase 4 的业务端到端验证链路。
 
-建议验收命令待补充。
+不做：
+
+- 不引入 etcd、Redis、消息队列。
+- 不引入 Prometheus、Grafana、Jaeger。
+- 不实现 payment-rpc、支付、取消订单、库存回滚等业务新功能。
+- 不引入 Helm；本阶段使用普通 YAML、少量脚本和 Makefile 即可。
+- 不追求生产级安全、资源配额和高可用 PostgreSQL。
+
+### Phase 5 推荐目录
+
+```text
+deploy/
+├── k8s/
+│   ├── README.md
+│   ├── namespace.yaml
+│   ├── postgres.yaml
+│   ├── db-migrate-job.yaml
+│   ├── gateway-api.yaml
+│   ├── user-rpc.yaml
+│   ├── product-rpc.yaml
+│   ├── inventory-rpc.yaml
+│   ├── order-rpc.yaml
+│   └── ingress.yaml
+scripts/
+├── e2e-compose.sh
+└── e2e-k8s.sh
+```
+
+可以拆得更细，但不要引入过度复杂的 kustomize/Helm 结构。
+
+### Phase 5 Kubernetes 资源要求
+
+Namespace：
+
+- 使用 `go-svc` namespace。
+- 所有 Phase 5 资源都放在该 namespace。
+
+PostgreSQL：
+
+- 使用 `postgres:16-alpine`。
+- 使用 Secret 保存 `POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_DB`。
+- 使用 `emptyDir` 或容器临时存储即可，不做 PVC。
+- 提供 `ClusterIP` Service，服务名为 `postgres`，端口 `5432`。
+- 配置 readiness/liveness probe，至少使用 `pg_isready`。
+
+数据库迁移：
+
+- 使用 Kubernetes Job 执行 `deploy/sql/001_phase3_schema.sql`。
+- Job 需要等待 PostgreSQL ready 后再执行 `psql`。
+- SQL 可以通过 ConfigMap 挂载。若复制 SQL 到 ConfigMap，需在 README 中说明它来自 `deploy/sql/001_phase3_schema.sql`，避免后续维护时忘记同步。
+- Job 成功后业务服务应能正常处理请求。
+
+业务服务：
+
+- 为以下服务各创建 Deployment + Service：
+  - `gateway-api`，HTTP `8080`
+  - `user-rpc`，gRPC `9000`
+  - `product-rpc`，gRPC `9001`
+  - `inventory-rpc`，gRPC `9002`
+  - `order-rpc`，gRPC `9003`
+- 镜像命名建议：
+  - `ghcr.io/wangchongv8/go-svc-gateway-api:phase5`
+  - `ghcr.io/wangchongv8/go-svc-user-rpc:phase5`
+  - `ghcr.io/wangchongv8/go-svc-product-rpc:phase5`
+  - `ghcr.io/wangchongv8/go-svc-inventory-rpc:phase5`
+  - `ghcr.io/wangchongv8/go-svc-order-rpc:phase5`
+- Deployment 默认 `replicas: 1`。
+- `imagePullPolicy: IfNotPresent`，方便 kind 加载本地镜像。
+- 资源 requests/limits 可以设置较小默认值，避免本地集群压力过大。
+- gateway-api 使用 HTTP readiness/liveness probe：`GET /healthz`。
+- RPC 服务可以使用 `tcpSocket` readiness/liveness probe。
+- Service 使用 `ClusterIP`，只暴露集群内部端口；外部验证通过 port-forward 或 Ingress。
+
+镜像发布：
+
+- 默认镜像仓库使用 GHCR：`ghcr.io/wangchongv8`。
+- 默认镜像 tag 使用 `phase5`。
+- Phase 5 先假设 GHCR Package 可以设为 public，目标机器不需要 `imagePullSecret` 即可拉取镜像。
+- 如果镜像设置为 private，`deploy/k8s/README.md` 必须补充 `imagePullSecret` 创建方式，并在 Deployment 中说明如何启用。
+- 不要求在另一台电脑上自建 registry。
+- 不要求实现 `docker save/load` tar 包分发；可以在 README 中作为轻量备选方案说明。
+
+配置：
+
+- 新增 K8s 专用配置，推荐命名：
+
+```text
+apps/gateway-api/etc/gateway-api.k8s.yaml
+apps/product-rpc/etc/product.k8s.yaml
+apps/inventory-rpc/etc/inventory.k8s.yaml
+apps/order-rpc/etc/order.k8s.yaml
+apps/user-rpc/etc/user.k8s.yaml
+```
+
+- K8s 配置必须使用 Kubernetes Service 名称：
+
+```text
+user-rpc:9000
+product-rpc:9001
+inventory-rpc:9002
+order-rpc:9003
+postgres:5432
+```
+
+- 优先通过 ConfigMap 挂载配置文件，再让容器命令使用 `-f /app/etc/<service>.k8s.yaml`。
+- PostgreSQL 账号密码应来自 Secret。若当前 go-zero 配置暂不支持从 Secret 拼接 DSN，可以先采用学习环境默认 DSN，但需要在 README 中说明这是 Phase 5 的简化点，并在 review 中作为后续改进项关注。
+
+Ingress：
+
+- 增加 `ingress.yaml`，路由到 `gateway-api` Service。
+- 建议 host 使用 `go-svc.local`。
+- 注明需要本地集群安装 ingress-nginx 或等价 Ingress Controller。
+- Phase 5 主要验收可以通过 `kubectl port-forward svc/gateway-api 8080:8080` 完成，不强制要求本机已经安装 Ingress Controller。
+
+### Phase 5 Makefile
+
+至少增加：
+
+- `make k8s-build`
+- `make k8s-push`
+- `make k8s-kind-load`
+- `make k8s-up`
+- `make k8s-ps`
+- `make k8s-logs`
+- `make k8s-port-forward`
+- `make e2e-k8s`
+- `make k8s-down`
+
+建议变量：
+
+```makefile
+K8S_NAMESPACE ?= go-svc
+KIND_CLUSTER ?= go-svc
+IMAGE_REGISTRY ?= ghcr.io/wangchongv8
+IMAGE_TAG ?= phase5
+```
+
+远端 Kubernetes 部署建议命令：
+
+开发机：
+
+```bash
+make k8s-build
+make k8s-push
+```
+
+目标机器：
+
+```bash
+make k8s-up
+make k8s-ps
+make e2e-k8s
+make k8s-down
+```
+
+本地 kind 验证建议命令：
+
+```bash
+make k8s-build
+make k8s-kind-load
+make k8s-up
+make k8s-ps
+make e2e-k8s
+make k8s-down
+```
+
+说明：
+
+- `k8s-build` 使用 `deploy/docker/service.Dockerfile` 构建 5 个业务镜像，镜像名使用 `$(IMAGE_REGISTRY)/go-svc-<service>:$(IMAGE_TAG)`。
+- `k8s-push` 将 5 个业务镜像推送到 `$(IMAGE_REGISTRY)`，默认是 `ghcr.io/wangchongv8`。如果未登录 GHCR，应给出清晰错误提示。
+- `k8s-kind-load` 使用 `kind load docker-image` 把镜像加载进 kind 集群；如果 kind 不存在，应给出清晰错误。该命令是本地 kind 模式专用，不是远端部署必需步骤。
+- `k8s-up` 应创建 namespace、应用 Secret/ConfigMap/PostgreSQL、等待 PostgreSQL ready、执行 db-migrate Job、应用业务服务和 Ingress。
+- `k8s-ps` 输出 pods、services、jobs。
+- `k8s-logs` 至少能查看 namespace 下最近日志，或提示用户指定服务。
+- `k8s-port-forward` 将 `gateway-api` Service 转发到本地 `8080`。
+- `e2e-k8s` 可复用 Phase 4 的 e2e 逻辑，但必须支持 `BASE_URL` 或自行启动临时 port-forward。
+- `k8s-down` 删除 `go-svc` namespace，清理所有 K8s 资源。
+
+### Phase 5 验证脚本
+
+推荐调整 `scripts/e2e-compose.sh`：
+
+- 支持 `BASE_URL` 环境变量，默认仍为 `http://localhost:8080`。
+- 保持 Compose 验证不回退。
+
+新增 `scripts/e2e-k8s.sh`：
+
+- 检查 `kubectl` 是否可用。
+- 检查 `go-svc` namespace 下 gateway-api 是否 ready。
+- 启动临时 `kubectl port-forward -n go-svc svc/gateway-api 8080:8080`。
+- 复用同一套 API 断言：健康检查、注册、登录、创建商品、设置库存、创建订单、查询订单、查询库存、查询用户订单列表、库存不足返回非 500。
+- 脚本退出时必须清理 port-forward 进程。
+
+### Phase 5 验收命令
+
+基础验证：
+
+```bash
+make fmt
+make test
+git diff --check
+make gen
+docker compose -f deploy/docker-compose/docker-compose.yml config
+kubectl apply --dry-run=client -f deploy/k8s/
+```
+
+kind 验证：
+
+```bash
+make k8s-build
+make k8s-kind-load
+make k8s-up
+make k8s-ps
+make e2e-k8s
+make k8s-down
+```
+
+远端 Kubernetes 验证：
+
+开发机：
+
+```bash
+docker login ghcr.io
+make k8s-build
+make k8s-push
+```
+
+目标机器：
+
+```bash
+git pull
+kubectl apply --dry-run=client -f deploy/k8s/
+make k8s-up
+make k8s-ps
+make e2e-k8s
+make k8s-down
+```
+
+如果镜像是 private，目标机器还需要在 `go-svc` namespace 创建 GHCR `imagePullSecret`。
+
+如果本地没有 Kubernetes 集群或 kind：
+
+- 必须说明未运行的命令、原因和手动验证步骤。
+- 至少运行 `kubectl apply --dry-run=client -f deploy/k8s/`，如果 kubectl 也不可用则说明原因。
+
+### Phase 5 Claude Code 执行提示词
+
+```text
+请在当前仓库实现 docs/claude-implementation-plan.md 中的 Phase 5。
+
+要求：
+- 严格遵循 Phase 5 说明。
+- 本阶段只实现 Kubernetes manifests、本地 kind 验证、GHCR 镜像发布、远端 Kubernetes 部署说明和相关脚本/命令。
+- 不实现 Phase 6 可观测性。
+- 不引入 etcd、Redis、消息队列、Helm、payment-rpc、支付、订单取消、库存回滚。
+- Kubernetes 服务发现使用 Service + DNS，不让业务服务直接依赖 etcd。
+- PostgreSQL 在本地 K8s 学习环境不持久化数据，通过 db-migrate Job 回放 deploy/sql/001_phase3_schema.sql。
+- 新增或更新 K8s 专用配置，服务间地址使用 Kubernetes Service 名称。
+- 默认镜像仓库使用 ghcr.io/wangchongv8，默认 tag 使用 phase5。
+- 新增 deploy/k8s/README.md，说明 GHCR 登录、镜像构建、镜像推送、远端机器部署、kind 环境、镜像加载、启动、验证、清理、Ingress 使用条件。
+- 新增 Makefile 目标：k8s-build、k8s-push、k8s-kind-load、k8s-up、k8s-ps、k8s-logs、k8s-port-forward、e2e-k8s、k8s-down。
+- e2e-k8s 必须验证真实 Kubernetes 链路，结束后清理 port-forward 进程。
+- 保持 Phase 4 Compose 能力不回退。
+- 实现后运行 make fmt、make test、git diff --check、make gen。
+- 如果 kubectl 可用，运行 kubectl apply --dry-run=client -f deploy/k8s/。
+- 如果 Docker/GHCR 登录可用，运行 make k8s-build、make k8s-push。
+- 如果 kind/Kubernetes 可用，运行 make k8s-build、make k8s-kind-load、make k8s-up、make k8s-ps、make e2e-k8s、make k8s-down。
+- 验证结束后必须清理 Kubernetes 资源和 port-forward 进程，并复查 8080 无异常监听。不要误杀用户已有进程。
+- 回复中列出修改文件、验证命令、结果和未完成事项。
+```
+
+### Phase 5 Review 重点
+
+- K8s manifests 是否能 dry-run 通过。
+- Service 名称、端口、容器端口是否和应用配置一致。
+- gateway-api、order-rpc 的服务间调用是否使用 K8s Service DNS。
+- PostgreSQL Secret、ConfigMap、Job 是否职责清晰。
+- db-migrate Job 是否能在业务验证前完成。
+- readiness/liveness probe 是否合理。
+- Ingress 是否清楚标注依赖 Ingress Controller。
+- GHCR 镜像名是否统一使用 `ghcr.io/wangchongv8/go-svc-<service>:phase5` 或 Makefile 变量生成的等价结果。
+- 远端 Kubernetes 部署说明是否清楚区分开发机 push 和目标机器 deploy。
+- private GHCR 镜像的 `imagePullSecret` 说明是否完整。
+- Makefile 命令是否可重复执行并能清理资源。
+- `e2e-k8s` 是否验证真实 Kubernetes 链路，并清理 port-forward。
+- Phase 4 Docker Compose 验证是否没有被破坏。
+- 验证后是否清理 K8s 资源并复查本地端口。
 
 ## Phase 6: 可观测性
 

@@ -36,7 +36,7 @@ Docker Compose 本地集群主体可用：
 
 建议：
 
-- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为”本地 Compose 环境每次清空数据，通过 db-migrate 重建”。（已完成）
+- 更新 `docs/claude-implementation-plan.md`，把 Phase 4 数据策略统一为“本地 Compose 环境每次清空数据，通过 db-migrate 重建”。（已完成）
 - 保留当前 `compose-down -v` 行为即可，不需要新增 `compose-clean`。（已完成）
 
 ## 验证结果

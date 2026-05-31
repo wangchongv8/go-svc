@@ -34,6 +34,7 @@
 | Phase 2 | ✅ 完成 | go-zero API + gRPC (gateway-api ↔ user-rpc) |
 | Phase 3 | ✅ 完成 | 多服务业务闭环 + PostgreSQL (product/inventory/order) |
 | Phase 4 | ✅ 完成 | Docker Compose 本地集群 |
+| Phase 5 | ✅ 完成 | Kubernetes 部署 (kind + GHCR) |
 
 ## 当前决策
 
@@ -203,7 +204,15 @@ curl localhost:8080/api/v1/users/1/orders
 | `make compose-down` | 停止并清理（含数据库数据） |
 | `make compose-logs` | 查看 Compose 日志 |
 | `make compose-ps` | 查看 Compose 服务状态 |
-| `make e2e-compose` | 端到端集成验证 |
+| `make e2e-compose` | 端到端集成验证 (Docker Compose) |
+| `make k8s-build` | 构建 K8s Docker 镜像 (GHCR tag) |
+| `make k8s-push` | 推送镜像到 GHCR |
+| `make k8s-kind-load` | 加载镜像到 kind 集群 |
+| `make k8s-up` | K8s 部署全部服务 |
+| `make k8s-down` | 删除 K8s namespace |
+| `make k8s-logs` | 查看 K8s Pod 日志 |
+| `make k8s-port-forward` | 端口转发 gateway-api :8080 |
+| `make e2e-k8s` | 端到端集成验证 (K8s) |
 
 ## Phase 4: Docker Compose 本地集群
 
@@ -248,3 +257,37 @@ make compose-down       # 停止并清理所有容器、网络和数据
 ```
 
 详见 [deploy/docker-compose/README.md](deploy/docker-compose/README.md)
+
+## Phase 5: Kubernetes 部署
+
+将微服务集群部署到 Kubernetes，使用 kind 本地验证。
+
+### 部署
+
+```bash
+make k8s-build        # 构建 5 个 Docker 镜像
+make k8s-kind-load    # 加载镜像到 kind
+make k8s-up           # 部署全部 K8s 资源
+```
+
+### 验证
+
+```bash
+make e2e-k8s          # 端到端验证（自动 port-forward）
+```
+
+### 停止
+
+```bash
+make k8s-down
+```
+
+### K8s DNS 服务发现
+
+```yaml
+# 和 Compose 相同的模式：服务名即是 DNS
+UserRpcConf:
+  Target: "user-rpc:9000"    # K8s Service 自动 DNS 解析
+```
+
+详见 [deploy/k8s/README.md](deploy/k8s/README.md)
