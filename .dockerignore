@@ -1,0 +1,13 @@
+.git/
+.gitignore
+__debug_bin*
+**/__debug_bin*
+*.test
+*_test.test
+bin/
+*.md
+docs/
+deploy/
+.vscode/
+.idea/
+tmp/

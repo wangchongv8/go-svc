@@ -1,0 +1,11 @@
+Name: gateway-api
+Host: 0.0.0.0
+Port: 8080
+UserRpcConf:
+  Target: "user-rpc:9000"
+ProductRpcConf:
+  Target: "product-rpc:9001"
+InventoryRpcConf:
+  Target: "inventory-rpc:9002"
+OrderRpcConf:
+  Target: "order-rpc:9003"

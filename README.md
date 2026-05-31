@@ -33,6 +33,7 @@
 | Phase 1 | ✅ 完成 | 最小 Go HTTP 服务 + Makefile + 测试 |
 | Phase 2 | ✅ 完成 | go-zero API + gRPC (gateway-api ↔ user-rpc) |
 | Phase 3 | ✅ 完成 | 多服务业务闭环 + PostgreSQL (product/inventory/order) |
+| Phase 4 | ✅ 完成 | Docker Compose 本地集群 |
 
 ## 当前决策
 
@@ -198,3 +199,52 @@ curl localhost:8080/api/v1/users/1/orders
 | `make run-gateway-api` | 启动 gateway-api (HTTP :8080) |
 | `make gen` | 从 .api 和 .proto 重新生成代码 |
 | `make db-migrate` | 执行 SQL 迁移 (需本地 PostgreSQL) |
+| `make compose-up` | Docker Compose 启动全部服务 |
+| `make compose-down` | 停止并清理（含数据库数据） |
+| `make compose-logs` | 查看 Compose 日志 |
+| `make compose-ps` | 查看 Compose 服务状态 |
+| `make e2e-compose` | 端到端集成验证 |
+
+## Phase 4: Docker Compose 本地集群
+
+一条命令拉起完整微服务集群（PostgreSQL + 5 个业务服务）。
+
+### 启动
+
+```bash
+make compose-up
+```
+
+### 验证
+
+```bash
+make e2e-compose
+```
+
+### 停止
+
+```bash
+make compose-down       # 停止并清理所有容器、网络和数据
+```
+
+每次 `compose-up` 都是全新环境，通过 `db-migrate` 回放 SQL 脚本初始化表结构。
+
+### 架构
+
+```
+┌─────────────────────────────────────────────┐
+│ Docker Compose                              │
+│                                             │
+│  gateway-api (:8080) ─────────────────┐     │
+│    ├── user-rpc (:9000)               │     │
+│    ├── product-rpc (:9001) ──┐        │     │
+│    ├── inventory-rpc (:9002)  │        │     │
+│    └── order-rpc (:9003) ─────┤        │     │
+│         ├── product-rpc ──────┘        │     │
+│         └── inventory-rpc ────┘        │     │
+│                                             │
+│  postgres (:5432) ← db-migrate              │
+└─────────────────────────────────────────────┘
+```
+
+详见 [deploy/docker-compose/README.md](deploy/docker-compose/README.md)

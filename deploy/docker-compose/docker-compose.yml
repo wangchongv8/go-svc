@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: go_svc
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d go_svc"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 3s
+
+  db-migrate:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../deploy/sql:/sql:ro
+    entrypoint: ["psql", "-h", "postgres", "-U", "postgres", "-d", "go_svc", "-f", "/sql/001_phase3_schema.sql"]
+    environment:
+      PGPASSWORD: postgres
+
+  user-rpc:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args:
+        SERVICE_MAIN: apps/user-rpc/user.go
+        SERVICE_CONF_DIR: apps/user-rpc/etc
+    command: ["-f", "/app/etc/user.compose.yaml"]
+    ports:
+      - "9000:9000"
+
+  product-rpc:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args:
+        SERVICE_MAIN: apps/product-rpc/product.go
+        SERVICE_CONF_DIR: apps/product-rpc/etc
+    command: ["-f", "/app/etc/product.compose.yaml"]
+    ports:
+      - "9001:9001"
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+
+  inventory-rpc:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args:
+        SERVICE_MAIN: apps/inventory-rpc/inventory.go
+        SERVICE_CONF_DIR: apps/inventory-rpc/etc
+    command: ["-f", "/app/etc/inventory.compose.yaml"]
+    ports:
+      - "9002:9002"
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+
+  order-rpc:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args:
+        SERVICE_MAIN: apps/order-rpc/order.go
+        SERVICE_CONF_DIR: apps/order-rpc/etc
+    command: ["-f", "/app/etc/order.compose.yaml"]
+    ports:
+      - "9003:9003"
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      product-rpc:
+        condition: service_started
+      inventory-rpc:
+        condition: service_started
+
+  gateway-api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args:
+        SERVICE_MAIN: apps/gateway-api/gateway.go
+        SERVICE_CONF_DIR: apps/gateway-api/etc
+    command: ["-f", "/app/etc/gateway-api.compose.yaml"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      - user-rpc
+      - product-rpc
+      - inventory-rpc
+      - order-rpc
+

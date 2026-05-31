@@ -1,4 +1,4 @@
-.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate
+.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose
 
 fmt:
 	go fmt ./...
@@ -40,3 +40,21 @@ gen:
 # Run database migrations (requires PostgreSQL running locally)
 db-migrate:
 	psql -h localhost -U postgres -d go_svc -f deploy/sql/001_phase3_schema.sql
+
+# Docker Compose commands
+COMPOSE_FILE := deploy/docker-compose/docker-compose.yml
+
+compose-up:
+	docker compose -f $(COMPOSE_FILE) up --build -d
+
+compose-down:
+	docker compose -f $(COMPOSE_FILE) down -v
+
+compose-logs:
+	docker compose -f $(COMPOSE_FILE) logs -f
+
+compose-ps:
+	docker compose -f $(COMPOSE_FILE) ps
+
+e2e-compose:
+	./scripts/e2e-compose.sh

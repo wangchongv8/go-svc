@@ -8,6 +8,7 @@ import (
 
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
+	userclient "go-svc/apps/user-rpc/userrpc"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -27,7 +28,15 @@ func NewGetUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUserLo
 }
 
 func (l *GetUserLogic) GetUser(req *types.GetUserReq) (resp *types.GetUserResp, err error) {
-	// todo: add your logic here and delete this line
+	rpcResp, err := l.svcCtx.UserRpc.GetUser(l.ctx, &userclient.GetUserRequest{
+		Id: req.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	return &types.GetUserResp{
+		ID:       rpcResp.Id,
+		Username: rpcResp.Username,
+	}, nil
 }
