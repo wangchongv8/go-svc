@@ -66,7 +66,7 @@ verify-observability-compose:
 K8S_NAMESPACE ?= go-svc
 KIND_CLUSTER ?= go-svc
 IMAGE_REGISTRY ?= ghcr.io/wangchongv8
-IMAGE_TAG ?= phase5
+IMAGE_TAG ?= phase6
 
 k8s-build:
 	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/user-rpc/user.go --build-arg SERVICE_CONF_DIR=apps/user-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .

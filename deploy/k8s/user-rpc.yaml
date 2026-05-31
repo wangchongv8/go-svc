@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
         - name: user-rpc
-          image: ghcr.io/wangchongv8/go-svc-user-rpc:phase5
+          image: ghcr.io/wangchongv8/go-svc-user-rpc:phase6
           imagePullPolicy: IfNotPresent
           command: ["/app/bin", "-f", "/app/etc/user.k8s.yaml"]
           volumeMounts:

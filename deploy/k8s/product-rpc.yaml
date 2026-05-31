@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
         - name: product-rpc
-          image: ghcr.io/wangchongv8/go-svc-product-rpc:phase5
+          image: ghcr.io/wangchongv8/go-svc-product-rpc:phase6
           imagePullPolicy: IfNotPresent
           command: ["/app/bin", "-f", "/app/etc/product.k8s.yaml"]
           volumeMounts:

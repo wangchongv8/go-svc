@@ -69,7 +69,7 @@ spec:
     spec:
       containers:
         - name: gateway-api
-          image: ghcr.io/wangchongv8/go-svc-gateway-api:phase5
+          image: ghcr.io/wangchongv8/go-svc-gateway-api:phase6
           imagePullPolicy: IfNotPresent
           command: ["/app/bin", "-f", "/app/etc/gateway-api.k8s.yaml"]
           volumeMounts:

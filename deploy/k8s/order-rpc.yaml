@@ -47,7 +47,7 @@ spec:
     spec:
       containers:
         - name: order-rpc
-          image: ghcr.io/wangchongv8/go-svc-order-rpc:phase5
+          image: ghcr.io/wangchongv8/go-svc-order-rpc:phase6
           imagePullPolicy: IfNotPresent
           command: ["/app/bin", "-f", "/app/etc/order.k8s.yaml"]
           volumeMounts:

@@ -43,7 +43,7 @@ spec:
     spec:
       containers:
         - name: inventory-rpc
-          image: ghcr.io/wangchongv8/go-svc-inventory-rpc:phase5
+          image: ghcr.io/wangchongv8/go-svc-inventory-rpc:phase6
           imagePullPolicy: IfNotPresent
           command: ["/app/bin", "-f", "/app/etc/inventory.k8s.yaml"]
           volumeMounts:
