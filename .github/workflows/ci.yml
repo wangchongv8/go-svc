@@ -28,27 +28,21 @@ jobs:
         run: docker compose -f deploy/docker-compose/docker-compose.yml config -q
       - name: yaml syntax check
         run: |
-          python3 -c "
-          import yaml, os, sys
-          errors = []
-          for root, dirs, files in os.walk('.'):
-              for f in files:
-                  if f.endswith(('.yaml', '.yml')) and ('deploy/k8s' in root or 'apps/' in root):
-                      path = os.path.join(root, f)
-                      try:
-                          with open(path) as fh:
-                              list(yaml.safe_load_all(fh))
-                      except Exception as e:
-                          errors.append(f'{path}: {e}')
-          if errors:
-              for e in errors:
-                  print(e, file=sys.stderr)
-              sys.exit(1)
-          print('All YAML files valid')
-          "
+          ruby -e '
+          require "yaml"
+          Dir.glob("deploy/k8s/*.yaml").each { |f|
+            YAML.load_stream(File.read(f))
+            puts "#{f}: OK"
+          }
+          Dir.glob("apps/*/etc/*.yaml").each { |f|
+            YAML.load_stream(File.read(f))
+            puts "#{f}: OK"
+          }
+          puts "All YAML files valid"
+          '
       - name: make gen (check no drift)
         run: |
-          go install github.com/zeromicro/go-zero/tools/goctl@latest
+          go install github.com/zeromicro/go-zero/tools/goctl@v1.10.1
           export PATH=$PATH:$(go env GOPATH)/bin
           make gen
           git diff --exit-code

@@ -70,24 +70,35 @@ K8s Service DNS 自动解析：
 
 ## 远端 K8s 部署
 
-镜像默认使用 `ghcr.io/wangchongv8/go-svc-<service>:phase5`。
+镜像由 GitHub Actions 自动构建，推送到 GHCR，使用 Git SHA tag：
+
+```
+ghcr.io/wangchongv8/go-svc-<service>:<git-sha>
+```
+
+main 分支额外推送 `:main` tag。
+
+### 开发机（仅需 push 代码）
 
 ```bash
-# 开发机：构建 + 推送
-make k8s-build          # 构建并打上 GHCR tag
-make k8s-push           # 推送到 ghcr.io/wangchongv8
+git push   # CI 自动运行；main 分支自动构建镜像
+```
 
-# 目标机器：部署 + 验证
-make k8s-up
-make e2e-k8s
-make k8s-down
+### 目标机器（部署 + 验证）
+
+```bash
+git pull
+make k8s-up                             # 首次部署
+# 或
+IMAGE_TAG=<git-sha> make k8s-set-images # 更新镜像
+make k8s-rollout-status                 # 观察滚动更新
+make e2e-k8s                            # 验证
 ```
 
 ### 前置条件
 
 - 目标机器能访问 `ghcr.io`（网络可达）
 - GHCR Package 需设为 **public**（否则需要 imagePullSecret）
-- 开发机已 `docker login ghcr.io`（本地推送时）
 - 目标机器已安装 `kubectl` 并配置好 kubeconfig
 
 ### Private GHCR 镜像

@@ -54,6 +54,11 @@ jobs:
             SERVICE_MAIN=${{ matrix.service.main }}
             SERVICE_CONF_DIR=${{ matrix.service.conf_dir }}
           push: true
-          tags: |
-            ghcr.io/wangchongv8/go-svc-${{ matrix.service.name }}:${{ github.sha }}
-            ghcr.io/wangchongv8/go-svc-${{ matrix.service.name }}:main
+          tags: ghcr.io/wangchongv8/go-svc-${{ matrix.service.name }}:${{ github.sha }}
+
+      - name: Tag as main (main branch only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker buildx imagetools create \
+            ghcr.io/wangchongv8/go-svc-${{ matrix.service.name }}:${{ github.sha }} \
+            --tag ghcr.io/wangchongv8/go-svc-${{ matrix.service.name }}:main

@@ -133,6 +133,7 @@ ci-check:
 	go test ./...
 	for f in scripts/*.sh; do bash -n "$$f"; done
 	docker compose -f deploy/docker-compose/docker-compose.yml config -q
+	ruby -e 'require "yaml"; Dir.glob("deploy/k8s/*.yaml").each{|f| YAML.load_stream(File.read(f)); puts "#{f}: OK"}; Dir.glob("apps/*/etc/*.yaml").each{|f| YAML.load_stream(File.read(f)); puts "#{f}: OK"}'
 	make gen && git diff --exit-code
 
 # Update K8s Deployment image tags
