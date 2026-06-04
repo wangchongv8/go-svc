@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: go fmt
+        run: go fmt ./...
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./...
+      - name: git diff check
+        run: git diff --exit-code
+      - name: bash script syntax
+        run: for f in scripts/*.sh; do bash -n "$f"; done
+      - name: docker compose config
+        run: docker compose -f deploy/docker-compose/docker-compose.yml config -q
+      - name: yaml syntax check
+        run: |
+          python3 -c "
+          import yaml, os, sys
+          errors = []
+          for root, dirs, files in os.walk('.'):
+              for f in files:
+                  if f.endswith(('.yaml', '.yml')) and ('deploy/k8s' in root or 'apps/' in root):
+                      path = os.path.join(root, f)
+                      try:
+                          with open(path) as fh:
+                              list(yaml.safe_load_all(fh))
+                      except Exception as e:
+                          errors.append(f'{path}: {e}')
+          if errors:
+              for e in errors:
+                  print(e, file=sys.stderr)
+              sys.exit(1)
+          print('All YAML files valid')
+          "
+      - name: make gen (check no drift)
+        run: |
+          go install github.com/zeromicro/go-zero/tools/goctl@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
+          make gen
+          git diff --exit-code

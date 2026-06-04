@@ -986,6 +986,197 @@ make k8s-down
 - Phase 4/5 原有命令是否没有回退。
 - 验证后是否清理进程并复查端口。
 
+## Phase 7: GitHub Actions CI + Kuboard 发布管理
+
+详细方案见 [docs/phase-7-ci-kuboard.md](phase-7-ci-kuboard.md)。
+
+### Phase 7 目标
+
+建立 CI 和远端发布管理的基础能力：
+
+- GitHub Actions 自动运行格式化、测试、脚本语法、Compose 配置和 YAML 静态校验。
+- GitHub Actions 构建 5 个业务服务镜像，并推送到 GHCR。
+- 远端 Kubernetes 从 GHCR 拉取镜像。
+- 远端安装 Kuboard，用于查看、更新和回滚 Kubernetes 工作负载。
+
+本阶段采用半自动发布：
+
+```text
+git push
+  -> GitHub Actions CI
+  -> GitHub Actions build/push images
+  -> 远端机器或 Kuboard 更新 image tag
+  -> kubectl/Kuboard 观察 rollout
+```
+
+### Phase 7 范围
+
+必须实现：
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/images.yml`
+- `make ci-check`
+- `make k8s-set-images`
+- `make k8s-rollout-status`
+- README / K8s / Phase 7 文档更新
+
+建议调整：
+
+- `IMAGE_TAG ?= phase6` 改为 `IMAGE_TAG ?= local` 或其他非阶段绑定默认值。
+- `images.yml` 使用 matrix 显式描述每个服务：
+  - `service`
+  - `main`
+  - `conf_dir`
+  - `image`
+
+不做：
+
+- 不让 GitHub Actions 直接部署远端机器。
+- 不把 kubeconfig、SSH private key 或集群管理员凭证放到 GitHub Secrets。
+- 不引入 Helm、Kustomize、Argo CD、Flux。
+- 不改造业务功能。
+
+### Phase 7 CI Workflow
+
+`ci.yml` 触发：
+
+```yaml
+on:
+  push:
+  pull_request:
+```
+
+检查项：
+
+```bash
+go fmt ./...
+go test ./...
+git diff --check
+bash -n scripts/*.sh
+docker compose -f deploy/docker-compose/docker-compose.yml config
+ruby -e 'require "yaml"; Dir["deploy/k8s/*.yaml", "apps/*/etc/*.yaml"].each { |f| YAML.load_stream(File.read(f)); puts f }'
+```
+
+说明：
+
+- CI 不启动 Compose 集群。
+- CI 不启动 Kubernetes 集群。
+- e2e 仍然保留给本地或远端环境执行。
+
+### Phase 7 Images Workflow
+
+`images.yml` 触发：
+
+```yaml
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+```
+
+权限：
+
+```yaml
+permissions:
+  contents: read
+  packages: write
+```
+
+镜像：
+
+```text
+ghcr.io/wangchongv8/go-svc-user-rpc:<git-sha>
+ghcr.io/wangchongv8/go-svc-product-rpc:<git-sha>
+ghcr.io/wangchongv8/go-svc-inventory-rpc:<git-sha>
+ghcr.io/wangchongv8/go-svc-order-rpc:<git-sha>
+ghcr.io/wangchongv8/go-svc-gateway-api:<git-sha>
+```
+
+同时可以推送 `main` tag，方便测试；实际远端发布优先使用 git sha tag。
+
+### Phase 7 Kuboard
+
+远端机器安装 Kuboard v3，推荐 Docker 独立部署：
+
+```text
+remote machine
+  -> Docker container: Kuboard
+  -> Kubernetes cluster: go-svc namespace
+```
+
+Kuboard 用途：
+
+- 查看 Deployment、Service、Pod、ConfigMap、Secret、Event。
+- 查看 Pod 日志和状态。
+- 修改 Deployment image tag，触发滚动更新。
+- 观察 rollout。
+- 手动回滚。
+
+Kuboard 不负责构建镜像；镜像由 GitHub Actions 构建并推送到 GHCR。
+
+### Phase 7 验收命令
+
+本地静态验证：
+
+```bash
+make ci-check
+git diff --check
+```
+
+远端验证：
+
+```bash
+git pull
+make k8s-up
+make e2e-k8s
+make verify-observability-k8s
+```
+
+发布指定 GitHub Actions 构建出的镜像：
+
+```bash
+IMAGE_TAG=<git-sha> make k8s-set-images
+make k8s-rollout-status
+make e2e-k8s
+make verify-observability-k8s
+```
+
+GitHub Actions 验证：
+
+- push 到 GitHub 后确认 `CI` workflow 通过。
+- main 分支或手动触发 `Build Images` 后确认 5 个 GHCR 镜像均存在。
+
+### Phase 7 Claude Code 执行提示词
+
+```text
+请在当前仓库实现 docs/phase-7-ci-kuboard.md。
+
+要求：
+- 新增 GitHub Actions workflow：.github/workflows/ci.yml 和 .github/workflows/images.yml。
+- 新增或更新 Makefile：ci-check、k8s-set-images、k8s-rollout-status，并把 IMAGE_TAG 默认值改成 local 或可覆盖值，不要继续使用 phase 固定默认值。
+- images workflow 使用 GHCR：ghcr.io/wangchongv8/go-svc-<service>，推送 git sha tag 和 main tag。
+- images workflow 使用 matrix 明确配置每个服务的 SERVICE_MAIN、SERVICE_CONF_DIR、image 名称。
+- 不实现自动部署远端机器，不引入 SSH/kubeconfig secrets。
+- 更新 README、deploy/k8s/README.md 或新增 docs，说明 GitHub Actions、GHCR、远端机器、Kuboard 的使用流程。
+- 保持 Phase 4/5/6 原有命令可用。
+- 实现后运行 make ci-check；如果 GitHub Actions 无法本地运行，说明需要 push 后在 GitHub UI 验证。
+- 不启动长期运行的 Compose/K8s 服务；如为了验证启动了，必须清理并检查端口。
+- 回复中列出修改文件、验证命令、结果和未完成事项。
+```
+
+### Phase 7 Review 重点
+
+- Workflow 是否能在 GitHub-hosted runner 上运行。
+- GHCR login 是否使用 `GITHUB_TOKEN` 和 `packages: write`，没有硬编码 token。
+- Matrix 是否覆盖 5 个服务，且 main/conf_dir/image 对应正确。
+- Docker build args 是否和 `deploy/docker/service.Dockerfile` 匹配。
+- `make ci-check` 是否能本地复现大部分 CI 检查。
+- `IMAGE_TAG` 是否不再绑定历史 phase。
+- 远端发布是否仍可通过 `kubectl set image` 或 Kuboard 手动完成。
+- 文档是否清楚说明 public/private GHCR、imagePullSecret、Kuboard 安装和发布流程。
+- 是否没有引入 GitHub Actions 自动部署远端机器。
+- Phase 4/5/6 命令是否没有回退。
+
 ## Claude Code Prompt 模板
 
 ```text

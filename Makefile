@@ -1,4 +1,4 @@
-.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose verify-observability-compose k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s verify-observability-k8s k8s-down
+.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose verify-observability-compose k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s verify-observability-k8s k8s-down ci-check k8s-set-images k8s-rollout-status
 
 fmt:
 	go fmt ./...
@@ -66,7 +66,7 @@ verify-observability-compose:
 K8S_NAMESPACE ?= go-svc
 KIND_CLUSTER ?= go-svc
 IMAGE_REGISTRY ?= ghcr.io/wangchongv8
-IMAGE_TAG ?= phase6
+IMAGE_TAG ?= local
 
 k8s-build:
 	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/user-rpc/user.go --build-arg SERVICE_CONF_DIR=apps/user-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
@@ -125,3 +125,27 @@ verify-observability-k8s:
 
 k8s-down:
 	kubectl delete namespace $(K8S_NAMESPACE)
+
+# CI checks (same as GitHub Actions ci.yml)
+ci-check:
+	go fmt ./... && git diff --exit-code
+	go vet ./...
+	go test ./...
+	for f in scripts/*.sh; do bash -n "$$f"; done
+	docker compose -f deploy/docker-compose/docker-compose.yml config -q
+	make gen && git diff --exit-code
+
+# Update K8s Deployment image tags
+k8s-set-images:
+	kubectl set image deployment/user-rpc user-rpc=$(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -n $(K8S_NAMESPACE)
+	kubectl set image deployment/product-rpc product-rpc=$(IMAGE_REGISTRY)/go-svc-product-rpc:$(IMAGE_TAG) -n $(K8S_NAMESPACE)
+	kubectl set image deployment/inventory-rpc inventory-rpc=$(IMAGE_REGISTRY)/go-svc-inventory-rpc:$(IMAGE_TAG) -n $(K8S_NAMESPACE)
+	kubectl set image deployment/order-rpc order-rpc=$(IMAGE_REGISTRY)/go-svc-order-rpc:$(IMAGE_TAG) -n $(K8S_NAMESPACE)
+	kubectl set image deployment/gateway-api gateway-api=$(IMAGE_REGISTRY)/go-svc-gateway-api:$(IMAGE_TAG) -n $(K8S_NAMESPACE)
+
+# Watch rollout status
+k8s-rollout-status:
+	@for app in user-rpc product-rpc inventory-rpc order-rpc gateway-api; do \
+		echo "=== $$app ==="; \
+		kubectl rollout status deployment/$$app -n $(K8S_NAMESPACE) --timeout=120s; \
+	done

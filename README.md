@@ -36,6 +36,7 @@
 | Phase 4 | ✅ 完成 | Docker Compose 本地集群 |
 | Phase 5 | ✅ 完成 | Kubernetes 部署 (kind + GHCR) |
 | Phase 6 | ✅ 完成 | 可观测性 (日志 + 指标 + Trace) |
+| Phase 7 | ✅ 完成 | GitHub Actions CI + Kuboard 发布管理 |
 
 ## 当前决策
 
@@ -323,3 +324,35 @@ kubectl port-forward -n go-svc svc/jaeger 16686:16686
 ```
 
 详见 [deploy/observability/README.md](deploy/observability/README.md)
+
+## Phase 7: GitHub Actions CI + 发布
+
+Git push 自动触发 CI 检查，main 分支自动构建镜像推送到 GHCR。
+
+### CI (每次 push/PR)
+
+自动运行：`go fmt → go vet → go test → bash -n → docker compose config → yaml lint → make gen`
+
+本地复现：`make ci-check`
+
+### 构建镜像 (main 分支)
+
+推送到 `ghcr.io/wangchongv8/go-svc-<service>:<git-sha>` + `:main`
+
+### 远端发布
+
+```bash
+# 远端机器上
+git pull
+IMAGE_TAG=<git-sha> make k8s-set-images
+make k8s-rollout-status
+make e2e-k8s
+```
+
+### Makefile 命令
+
+| 命令 | 说明 |
+|------|------|
+| `make ci-check` | 本地运行 CI 全部检查 |
+| `make k8s-set-images` | 更新 K8s Deployment 镜像 tag |
+| `make k8s-rollout-status` | 查看滚动更新状态 |
