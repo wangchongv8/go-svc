@@ -66,7 +66,7 @@ verify-observability-compose:
 K8S_NAMESPACE ?= go-svc
 KIND_CLUSTER ?= go-svc
 IMAGE_REGISTRY ?= ghcr.io/wangchongv8
-IMAGE_TAG ?= local
+IMAGE_TAG ?= main
 
 k8s-build:
 	docker build --platform linux/amd64 --build-arg SERVICE_MAIN=apps/user-rpc/user.go --build-arg SERVICE_CONF_DIR=apps/user-rpc/etc -t $(IMAGE_REGISTRY)/go-svc-user-rpc:$(IMAGE_TAG) -f deploy/docker/service.Dockerfile .
@@ -102,11 +102,9 @@ k8s-up:
 	kubectl apply -f deploy/k8s/gateway-api.yaml
 	kubectl apply -f deploy/k8s/ingress.yaml
 	kubectl apply -f deploy/k8s/observability.yaml
-	@echo "Waiting for pods..."
-	@for app in user-rpc product-rpc inventory-rpc order-rpc gateway-api; do \
-		kubectl wait --for=condition=ready pod -l app=$$app -n $(K8S_NAMESPACE) --timeout=60s; \
-	done
-	@echo "All pods ready."
+	$(MAKE) k8s-set-images
+	$(MAKE) k8s-rollout-status
+	@echo "All deployments rolled out with IMAGE_TAG=$(IMAGE_TAG)."
 
 k8s-ps:
 	kubectl get pods,svc -n $(K8S_NAMESPACE)

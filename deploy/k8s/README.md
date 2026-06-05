@@ -14,7 +14,7 @@ kind create cluster --name go-svc
 ```bash
 make k8s-build        # 构建 5 个 Docker 镜像
 make k8s-kind-load    # 加载镜像到 kind 节点
-make k8s-up           # 部署全部 K8s 资源
+IMAGE_TAG=local make k8s-up # 部署本地镜像到 kind
 make k8s-ps           # 查看 Pod 和 Service
 ```
 
@@ -88,10 +88,9 @@ git push   # CI 自动运行；main 分支自动构建镜像
 
 ```bash
 git pull
-make k8s-up                             # 首次部署
-# 或
-IMAGE_TAG=<git-sha> make k8s-set-images # 更新镜像
-make k8s-rollout-status                 # 观察滚动更新
+make k8s-up                             # 默认部署 :main 镜像
+# 或部署指定 Git SHA 镜像
+IMAGE_TAG=<git-sha> make k8s-up
 make e2e-k8s                            # 验证
 ```
 

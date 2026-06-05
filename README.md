@@ -271,7 +271,7 @@ make compose-down       # 停止并清理所有容器、网络和数据
 ```bash
 make k8s-build        # 构建 5 个 Docker 镜像
 make k8s-kind-load    # 加载镜像到 kind
-make k8s-up           # 部署全部 K8s 资源
+IMAGE_TAG=local make k8s-up # 部署本地镜像到 kind
 ```
 
 ### 验证
@@ -342,10 +342,12 @@ Git push 自动触发 CI 检查，main 分支自动构建镜像推送到 GHCR。
 ### 远端发布
 
 ```bash
-# 远端机器上
+# 远端机器上，默认部署 GHCR 的 :main 镜像
 git pull
-IMAGE_TAG=<git-sha> make k8s-set-images
-make k8s-rollout-status
+make k8s-up
+
+# 或部署指定 Git SHA 镜像
+IMAGE_TAG=<git-sha> make k8s-up
 make e2e-k8s
 ```
 

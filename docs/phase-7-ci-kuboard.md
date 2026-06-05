@@ -125,7 +125,7 @@ Use `GITHUB_TOKEN` for GHCR login. No personal access token should be needed for
 Add or update:
 
 ```makefile
-IMAGE_TAG ?= local
+IMAGE_TAG ?= main
 
 ci-check:
 	go fmt ./...
@@ -148,7 +148,7 @@ k8s-rollout-status:
 	done
 ```
 
-`k8s-set-images` is optional but useful. It lets the remote machine update images to a specific CI-produced tag without editing YAML by hand.
+`k8s-up` should call `k8s-set-images` and `k8s-rollout-status`, so first deployment and later updates use the same command. `k8s-set-images` is still useful as a lower-level command when only image tags need to change.
 
 ## Kubernetes Manifest Strategy
 
@@ -186,7 +186,7 @@ Use a GitHub token with package read permission. Do not commit tokens.
 
 ## Remote Machine Workflow
 
-On the remote machine:
+On the remote machine, deploy the latest `main` image tag:
 
 ```bash
 git pull
@@ -196,11 +196,10 @@ make e2e-k8s
 make verify-observability-k8s
 ```
 
-For a newly built image tag:
+For a specific CI-produced Git SHA image tag:
 
 ```bash
-IMAGE_TAG=<git-sha> make k8s-set-images
-make k8s-rollout-status
+IMAGE_TAG=<git-sha> make k8s-up
 make e2e-k8s
 make verify-observability-k8s
 ```
@@ -308,7 +307,7 @@ kubectl rollout undo deployment/gateway-api -n go-svc
 - `.github/workflows/ci.yml` exists and runs checks on push and pull request.
 - `.github/workflows/images.yml` exists and can build/push all 5 service images to GHCR.
 - `make ci-check` exists and matches the CI checks as closely as practical.
-- `IMAGE_TAG` default is no longer phase-specific.
+- `IMAGE_TAG` default is `main`, so remote `make k8s-up` deploys the latest main-branch image by default.
 - Docs explain how to:
   - view GitHub Actions results,
   - find GHCR image tags,
@@ -333,7 +332,7 @@ kubectl rollout undo deployment/gateway-api -n go-svc
 
 要求：
 - 新增 GitHub Actions workflow：.github/workflows/ci.yml 和 .github/workflows/images.yml。
-- 新增或更新 Makefile：ci-check、k8s-set-images、k8s-rollout-status，并把 IMAGE_TAG 默认值改成 local 或可覆盖值，不要继续使用 phase 固定默认值。
+- 新增或更新 Makefile：ci-check、k8s-set-images、k8s-rollout-status，并把 IMAGE_TAG 默认值改成 main；k8s-up 需要支持 `IMAGE_TAG=<git-sha>` 覆盖。
 - images workflow 使用 GHCR：ghcr.io/wangchongv8/go-svc-<service>，推送 git sha tag 和 main tag。
 - images workflow 使用 matrix 明确配置每个服务的 SERVICE_MAIN、SERVICE_CONF_DIR、image 名称。
 - 不实现自动部署远端机器，不引入 SSH/kubeconfig secrets。
@@ -343,4 +342,3 @@ kubectl rollout undo deployment/gateway-api -n go-svc
 - 不启动长期运行的 Compose/K8s 服务；如为了验证启动了，必须清理并检查端口。
 - 回复中列出修改文件、验证命令、结果和未完成事项。
 ```
-
