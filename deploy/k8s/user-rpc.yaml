@@ -19,7 +19,8 @@ spec:
   selector:
     app: user-rpc
   ports:
-    - port: 9000
+    - name: grpc
+      port: 9000
       targetPort: 9000
     - name: metrics
       port: 6060

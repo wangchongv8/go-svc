@@ -46,7 +46,8 @@ spec:
   selector:
     app: gateway-api
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080
     - name: metrics
       port: 6060

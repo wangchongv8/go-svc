@@ -24,7 +24,8 @@ spec:
   selector:
     app: order-rpc
   ports:
-    - port: 9003
+    - name: grpc
+      port: 9003
       targetPort: 9003
     - name: metrics
       port: 6060

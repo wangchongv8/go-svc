@@ -20,7 +20,8 @@ spec:
   selector:
     app: product-rpc
   ports:
-    - port: 9001
+    - name: grpc
+      port: 9001
       targetPort: 9001
     - name: metrics
       port: 6060
