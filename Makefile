@@ -93,6 +93,7 @@ k8s-up:
 	kubectl apply -f deploy/k8s/namespace.yaml
 	kubectl apply -f deploy/k8s/postgres.yaml
 	kubectl wait --for=condition=ready pod -l app=postgres -n $(K8S_NAMESPACE) --timeout=60s
+	kubectl delete job db-migrate -n $(K8S_NAMESPACE) --ignore-not-found
 	kubectl apply -f deploy/k8s/db-migrate-job.yaml
 	kubectl wait --for=condition=complete job/db-migrate -n $(K8S_NAMESPACE) --timeout=60s
 	kubectl apply -f deploy/k8s/user-rpc.yaml
