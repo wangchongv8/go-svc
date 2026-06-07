@@ -7,8 +7,8 @@ import (
 	"go-svc/apps/order-rpc/internal/svc"
 	"go-svc/apps/order-rpc/model"
 	"go-svc/apps/order-rpc/order"
-	"go-svc/pkg/observability/traceid"
 	productclient "go-svc/apps/product-rpc/productrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"google.golang.org/grpc/codes"
