@@ -9,6 +9,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	orderclient "go-svc/apps/order-rpc/orderrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -28,7 +29,7 @@ func NewCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Creat
 }
 
 func (l *CreateOrderLogic) CreateOrder(req *types.CreateOrderReq) (resp *types.OrderResp, err error) {
-	rpcResp, err := l.svcCtx.OrderRpc.CreateOrder(l.ctx, &orderclient.CreateOrderRequest{
+	rpcResp, err := l.svcCtx.OrderRpc.CreateOrder(traceid.WithOutgoingMetadata(l.ctx), &orderclient.CreateOrderRequest{
 		UserId:    req.UserID,
 		ProductId: req.ProductID,
 		Quantity:  req.Quantity,

@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	inventoryclient "go-svc/apps/inventory-rpc/inventoryrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,7 +26,7 @@ func NewGetStockLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetStock
 }
 
 func (l *GetStockLogic) GetStock(req *types.GetStockReq) (resp *types.StockResp, err error) {
-	rpcResp, err := l.svcCtx.InventoryRpc.GetStock(l.ctx, &inventoryclient.GetStockRequest{
+	rpcResp, err := l.svcCtx.InventoryRpc.GetStock(traceid.WithOutgoingMetadata(l.ctx), &inventoryclient.GetStockRequest{
 		ProductId: req.ProductID,
 	})
 	if err != nil {

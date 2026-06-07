@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	orderclient "go-svc/apps/order-rpc/orderrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,7 +26,7 @@ func NewListUserOrdersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Li
 }
 
 func (l *ListUserOrdersLogic) ListUserOrders(req *types.ListUserOrdersReq) (resp *types.ListUserOrdersResp, err error) {
-	rpcResp, err := l.svcCtx.OrderRpc.ListUserOrders(l.ctx, &orderclient.ListUserOrdersRequest{
+	rpcResp, err := l.svcCtx.OrderRpc.ListUserOrders(traceid.WithOutgoingMetadata(l.ctx), &orderclient.ListUserOrdersRequest{
 		UserId: req.UserID,
 	})
 	if err != nil {

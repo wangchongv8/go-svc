@@ -9,6 +9,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	userclient "go-svc/apps/user-rpc/userrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -28,7 +29,7 @@ func NewGetUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetUserLo
 }
 
 func (l *GetUserLogic) GetUser(req *types.GetUserReq) (resp *types.GetUserResp, err error) {
-	rpcResp, err := l.svcCtx.UserRpc.GetUser(l.ctx, &userclient.GetUserRequest{
+	rpcResp, err := l.svcCtx.UserRpc.GetUser(traceid.WithOutgoingMetadata(l.ctx), &userclient.GetUserRequest{
 		Id: req.ID,
 	})
 	if err != nil {

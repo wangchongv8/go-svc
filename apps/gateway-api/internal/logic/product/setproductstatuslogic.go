@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	productclient "go-svc/apps/product-rpc/productrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,7 +26,7 @@ func NewSetProductStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *SetProductStatusLogic) SetProductStatus(req *types.SetProductStatusReq) (resp *types.ProductResp, err error) {
-	rpcResp, err := l.svcCtx.ProductRpc.SetProductStatus(l.ctx, &productclient.SetProductStatusRequest{
+	rpcResp, err := l.svcCtx.ProductRpc.SetProductStatus(traceid.WithOutgoingMetadata(l.ctx), &productclient.SetProductStatusRequest{
 		Id:     req.ID,
 		Status: req.Status,
 	})
