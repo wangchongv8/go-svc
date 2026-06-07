@@ -5,6 +5,7 @@ import (
 
 	"go-svc/apps/user-rpc/internal/svc"
 	"go-svc/apps/user-rpc/user"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -29,7 +30,15 @@ func (l *RegisterLogic) Register(in *user.RegisterRequest) (*user.RegisterRespon
 		return nil, rpcError(err)
 	}
 
-	l.Infow("user registered", logx.Field("user_id", u.ID), logx.Field("username", u.Username))
+	tid, sid := traceid.FromContext(l.ctx)
+	fields := []logx.LogField{
+		logx.Field("user_id", u.ID),
+		logx.Field("username", u.Username),
+	}
+	if tid != "" {
+		fields = append(fields, logx.Field("trace_id", tid), logx.Field("span_id", sid))
+	}
+	l.Infow("user registered", fields...)
 
 	return &user.RegisterResponse{
 		Id:       u.ID,

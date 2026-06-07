@@ -7,6 +7,7 @@ import (
 	"go-svc/apps/order-rpc/internal/svc"
 	"go-svc/apps/order-rpc/model"
 	"go-svc/apps/order-rpc/order"
+	"go-svc/pkg/observability/traceid"
 	productclient "go-svc/apps/product-rpc/productrpc"
 
 	"github.com/zeromicro/go-zero/core/logx"
@@ -29,12 +30,10 @@ func NewCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Creat
 }
 
 func (l *CreateOrderLogic) CreateOrder(in *order.CreateOrderRequest) (*order.CreateOrderResponse, error) {
-	// 0. Validate user_id
 	if in.UserId <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "user_id must be greater than 0")
 	}
 
-	// 1. Validate product exists and is active
 	product, err := l.svcCtx.ProductRpc.GetProduct(l.ctx, &productclient.GetProductRequest{Id: in.ProductId})
 	if err != nil {
 		return nil, err
@@ -43,17 +42,20 @@ func (l *CreateOrderLogic) CreateOrder(in *order.CreateOrderRequest) (*order.Cre
 		return nil, status.Error(codes.FailedPrecondition, "product is not active")
 	}
 
-	// 2. Deduct stock
 	_, err = l.svcCtx.InventoryRpc.DeductStock(l.ctx, &inventoryclient.DeductStockRequest{
 		ProductId: in.ProductId,
 		Quantity:  in.Quantity,
 	})
 	if err != nil {
-		l.Errorw("stock deduct failed", logx.Field("product_id", in.ProductId), logx.Field("user_id", in.UserId))
+		etid, esid := traceid.FromContext(l.ctx)
+		l.Errorw("stock deduct failed",
+			logx.Field("product_id", in.ProductId),
+			logx.Field("user_id", in.UserId),
+			logx.Field("trace_id", etid),
+			logx.Field("span_id", esid))
 		return nil, err
 	}
 
-	// 3. Create order
 	o := &model.Order{
 		UserID:          in.UserId,
 		ProductID:       in.ProductId,
@@ -66,11 +68,15 @@ func (l *CreateOrderLogic) CreateOrder(in *order.CreateOrderRequest) (*order.Cre
 		return nil, rpcError(err)
 	}
 
+	tid, sid := traceid.FromContext(l.ctx)
+
 	l.Infow("order created",
 		logx.Field("order_id", created.ID),
 		logx.Field("user_id", created.UserID),
 		logx.Field("product_id", created.ProductID),
-		logx.Field("total_price_cents", created.TotalPriceCents))
+		logx.Field("total_price_cents", created.TotalPriceCents),
+		logx.Field("trace_id", tid),
+		logx.Field("span_id", sid))
 
 	return toOrderResponse(created), nil
 }

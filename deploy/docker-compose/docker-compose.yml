@@ -122,6 +122,15 @@ services:
     ports:
       - "3000:3000"
 
+  loki:
+    image: grafana/loki:3.4.0
+    volumes:
+      - ../observability/loki/loki.yml:/etc/loki/local-config.yaml:ro
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+    ports:
+      - "3100:3100"
+
   jaeger:
     image: jaegertracing/all-in-one:latest
     environment:

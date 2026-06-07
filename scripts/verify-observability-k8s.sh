@@ -4,14 +4,20 @@ set -euo pipefail
 K8S_NAMESPACE="${K8S_NAMESPACE:-go-svc}"
 PROM_PORT="${OBS_PROM_PORT:-19090}"
 JAEGER_PORT="${OBS_JAEGER_PORT:-16686}"
+LOKI_PORT="${OBS_LOKI_PORT:-13100}"
+GATEWAY_PORT="${OBS_GATEWAY_PORT:-18080}"
 PASS=0
 FAIL=0
 PF_PROM=""
 PF_JAEGER=""
+PF_LOKI=""
+PF_GATEWAY=""
 
 cleanup() {
   if [ -n "${PF_PROM:-}" ]; then kill "$PF_PROM" 2>/dev/null || true; wait "$PF_PROM" 2>/dev/null || true; fi
   if [ -n "${PF_JAEGER:-}" ]; then kill "$PF_JAEGER" 2>/dev/null || true; wait "$PF_JAEGER" 2>/dev/null || true; fi
+  if [ -n "${PF_LOKI:-}" ]; then kill "$PF_LOKI" 2>/dev/null || true; wait "$PF_LOKI" 2>/dev/null || true; fi
+  if [ -n "${PF_GATEWAY:-}" ]; then kill "$PF_GATEWAY" 2>/dev/null || true; wait "$PF_GATEWAY" 2>/dev/null || true; fi
 }
 trap cleanup EXIT
 
@@ -22,10 +28,13 @@ kubectl port-forward -n "$K8S_NAMESPACE" svc/prometheus "$PROM_PORT:9090" &
 PF_PROM=$!
 kubectl port-forward -n "$K8S_NAMESPACE" svc/jaeger "$JAEGER_PORT:16686" &
 PF_JAEGER=$!
-sleep 1
+kubectl port-forward -n "$K8S_NAMESPACE" svc/loki "$LOKI_PORT:3100" &
+PF_LOKI=$!
+kubectl port-forward -n "$K8S_NAMESPACE" svc/gateway-api "$GATEWAY_PORT:8080" &
+PF_GATEWAY=$!
+sleep 2
 
-# Verify port-forward processes are alive
-for pid_var in PF_PROM PF_JAEGER; do
+for pid_var in PF_PROM PF_JAEGER PF_LOKI PF_GATEWAY; do
   eval "pid=\$$pid_var"
   if ! kill -0 "$pid" 2>/dev/null; then
     echo "  FAIL: port-forward ($pid_var=$pid) died immediately (port in use?)"
@@ -53,6 +62,54 @@ if [ "${JAEGER:-0}" -gt 0 ]; then
   PASS=$((PASS + 1))
 else
   echo "  FAIL: Jaeger not responding"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "--- Loki ---"
+LOKI_READY=$(curl -sf "http://localhost:$LOKI_PORT/ready" 2>/dev/null | grep -c "Ready" || echo "0")
+LOKI_READY=$(echo "$LOKI_READY" | tr -d '[:space:]')
+if [ "${LOKI_READY:-0}" -gt 0 ]; then
+  echo "  PASS: Loki ready"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: Loki not ready"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "--- Loki Logs ---"
+LOGS=$(curl -sf --data-urlencode 'query={namespace="go-svc"}' "http://localhost:$LOKI_PORT/loki/api/v1/query_range" 2>/dev/null || echo "")
+LOG_COUNT=$(echo "$LOGS" | grep -c '"stream"' || echo "0")
+LOG_COUNT=$(echo "$LOG_COUNT" | tr -d '[:space:]')
+if [ "${LOG_COUNT:-0}" -gt 0 ]; then
+  echo "  PASS: logs found via LogQL ($LOG_COUNT streams)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: no logs returned by LogQL (Alloy may not be scraping yet)"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "--- Trace-Log Correlation ---"
+# send register request to produce a trace_id business log in user-rpc
+SUFFIX=$(date +%s)
+REGISTER_HEADERS=$(curl -sD - -o /dev/null \
+  -X POST "http://localhost:$GATEWAY_PORT/api/v1/register" \
+  -H 'Content-Type: application/json' \
+  -d "{\"username\":\"trace-k8s-${SUFFIX}\",\"password\":\"123456\"}" 2>/dev/null || echo "")
+TRACE_ID=$(echo "$REGISTER_HEADERS" | grep -i "X-Trace-Id:" | awk '{print $2}' | tr -d '\r')
+if [ -n "${TRACE_ID:-}" ]; then
+  sleep 3
+  MATCHES=$(curl -sf --data-urlencode "query={namespace=\"go-svc\", app=\"user-rpc\"} | json | trace_id=\"$TRACE_ID\"" \
+    "http://localhost:$LOKI_PORT/loki/api/v1/query_range" 2>/dev/null | grep -c '"stream"' || echo "0")
+  MATCHES=$(echo "$MATCHES" | tr -d '[:space:]')
+  if [ "${MATCHES:-0}" -gt 0 ]; then
+    echo "  PASS: log found by trace_id=$TRACE_ID ($MATCHES)"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: no log for trace_id=$TRACE_ID in user-rpc"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  echo "  FAIL: X-Trace-Id header missing from register response"
   FAIL=$((FAIL + 1))
 fi
 

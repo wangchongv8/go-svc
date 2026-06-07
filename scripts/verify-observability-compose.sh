@@ -78,6 +78,26 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+echo "--- Loki ---"
+LOKI_READY=$(curl -sf "http://localhost:3100/ready" 2>/dev/null | grep -c "Ready" || echo "0")
+if [ "${LOKI_READY:-0}" -gt 0 ]; then
+  echo "  PASS: Loki ready ($LOKI_READY)"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: Loki not ready"
+  FAIL=$((FAIL + 1))
+fi
+
+echo "--- X-Trace-Id ---"
+HEALTHZ_HEADERS=$(curl -sD - -o /dev/null "$BASE/healthz" 2>/dev/null || echo "")
+if echo "$HEALTHZ_HEADERS" | grep -qi "X-Trace-Id"; then
+  echo "  PASS: X-Trace-Id header present"
+  PASS=$((PASS + 1))
+else
+  echo "  FAIL: X-Trace-Id header missing"
+  FAIL=$((FAIL + 1))
+fi
+
 echo ""
 echo "=== Results: $PASS passed, $FAIL failed ==="
 if [ "$FAIL" -gt 0 ]; then
