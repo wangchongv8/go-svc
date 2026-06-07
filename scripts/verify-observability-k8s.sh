@@ -83,6 +83,14 @@ else
 fi
 
 echo "--- Loki Logs ---"
+SUFFIX="$(date +%s)-$$"
+REGISTER_HEADERS=$(curl -sD - -o /dev/null \
+  -X POST "http://localhost:$GATEWAY_PORT/api/v1/register" \
+  -H 'Content-Type: application/json' \
+  -d "{\"username\":\"trace-k8s-${SUFFIX}\",\"password\":\"123456\"}" 2>/dev/null || echo "")
+TRACE_ID=$(echo "$REGISTER_HEADERS" | grep -i "X-Trace-Id:" | awk '{print $2}' | tr -d '\r')
+sleep 5
+
 LOGS=$(curl -sf --data-urlencode 'query={namespace="go-svc"}' "http://localhost:$LOKI_PORT/loki/api/v1/query_range" 2>/dev/null || echo "")
 LOG_COUNT=$(echo "$LOGS" | grep -c '"stream"' || echo "0")
 LOG_COUNT=$(echo "$LOG_COUNT" | tr -d '[:space:]')
@@ -95,15 +103,7 @@ else
 fi
 
 echo "--- Trace-Log Correlation ---"
-# send register request to produce a trace_id business log in user-rpc
-SUFFIX=$(date +%s)
-REGISTER_HEADERS=$(curl -sD - -o /dev/null \
-  -X POST "http://localhost:$GATEWAY_PORT/api/v1/register" \
-  -H 'Content-Type: application/json' \
-  -d "{\"username\":\"trace-k8s-${SUFFIX}\",\"password\":\"123456\"}" 2>/dev/null || echo "")
-TRACE_ID=$(echo "$REGISTER_HEADERS" | grep -i "X-Trace-Id:" | awk '{print $2}' | tr -d '\r')
 if [ -n "${TRACE_ID:-}" ]; then
-  sleep 3
   MATCHES=$(curl -sf --data-urlencode "query={namespace=\"go-svc\", app=\"user-rpc\"} | json | trace_id=\"$TRACE_ID\"" \
     "http://localhost:$LOKI_PORT/loki/api/v1/query_range" 2>/dev/null | grep -c '"stream"' || echo "0")
   MATCHES=$(echo "$MATCHES" | tr -d '[:space:]')

@@ -371,7 +371,7 @@ make e2e-k8s
 | 组件 | 端口 | 说明 |
 |------|------|------|
 | Loki | :3100 | 日志存储 + LogQL |
-| Alloy | DaemonSet | K8s Pod 日志采集 |
+| Alloy | Deployment | 通过 Kubernetes API 采集 Pod 日志 |
 
 ### 日志查询链路
 

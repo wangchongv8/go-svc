@@ -67,8 +67,8 @@ Kubernetes path:
 
 ```text
 business service stdout
-  -> node container log files
-  -> Alloy DaemonSet
+  -> Kubernetes logs API
+  -> Alloy Deployment
   -> Loki
   -> Grafana datasource
 ```
@@ -90,7 +90,7 @@ Must implement:
 - Loki in Docker Compose.
 - Loki in Kubernetes observability manifests.
 - Grafana datasource provisioning for Loki in Compose and Kubernetes.
-- Alloy DaemonSet in Kubernetes to collect Pod logs.
+- Alloy Deployment in Kubernetes to collect Pod logs through the Kubernetes API.
 - trace id extraction helper for Go contexts.
 - HTTP middleware in `gateway-api` that returns `X-Trace-Id`.
 - Business logs enriched with `trace_id` where context is available.
@@ -155,8 +155,8 @@ If collecting Docker Compose container logs directly becomes too complex for thi
 Update `deploy/k8s/observability.yaml` or split into clear files under `deploy/k8s/`:
 
 - Add Loki ConfigMap, Deployment, and Service.
-- Add Alloy ConfigMap, ServiceAccount, RBAC, and DaemonSet.
-- Alloy should collect Pod logs from the node log paths and attach Kubernetes metadata.
+- Add Alloy ConfigMap, ServiceAccount, RBAC, and Deployment.
+- Alloy should collect Pod logs through the Kubernetes API and attach Kubernetes metadata.
 - Grafana datasource provisioning should include Loki:
 
 ```text

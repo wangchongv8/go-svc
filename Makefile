@@ -120,7 +120,9 @@ k8s-up:
 	kubectl apply -f deploy/k8s/gateway-api.yaml
 	kubectl apply -f deploy/k8s/ingress.yaml
 	kubectl apply -f deploy/k8s/observability.yaml
+	kubectl delete daemonset alloy -n $(K8S_NAMESPACE) --ignore-not-found
 	kubectl apply -f deploy/k8s/alloy.yaml
+	kubectl rollout status deployment/alloy -n $(K8S_NAMESPACE) --timeout=120s
 	$(MAKE) k8s-set-images
 	$(MAKE) k8s-rollout-status
 	@echo "All deployments rolled out with IMAGE_TAG=$(IMAGE_TAG)."

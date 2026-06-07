@@ -31,15 +31,6 @@ data:
         regex = "Running"
       }
 
-      // Build __path__ for container log files
-      rule {
-        source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-        separator = "_"
-        regex = "(.*)_(.*)_(.*)_(.*)"
-        replacement = "/var/log/pods/${1}_${2}_${3}/${4}/*.log"
-        target_label = "__path__"
-      }
-
       // Extract low-cardinality labels for Loki query
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
@@ -62,18 +53,12 @@ data:
       }
     }
 
-    local.file_match "pod_logs" {
-      path_targets = discovery.relabel.pod_logs.output
-    }
-
-    loki.source.file "pod_logs" {
-      targets    = local.file_match.pod_logs.targets
+    loki.source.kubernetes "pod_logs" {
+      targets    = discovery.relabel.pod_logs.output
       forward_to = [loki.process.pod_logs.receiver]
     }
 
     loki.process "pod_logs" {
-      stage.cri {}
-
       stage.json {
         expressions = {
           level    = "level",
@@ -123,11 +108,12 @@ subjects:
     namespace: go-svc
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   name: alloy
   namespace: go-svc
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: alloy
@@ -148,14 +134,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/alloy
-            - name: varlog
-              mountPath: /var/log
-              readOnly: true
-          env:
-            - name: HOSTNAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
           resources:
             requests:
               memory: "128Mi"
@@ -167,6 +145,3 @@ spec:
         - name: config
           configMap:
             name: alloy-config
-        - name: varlog
-          hostPath:
-            path: /var/log

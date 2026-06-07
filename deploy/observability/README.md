@@ -42,7 +42,7 @@ Phase 8 将补充 Loki + Alloy：
 
 - Loki 负责存储和查询日志。
 - Grafana 作为日志检索入口。
-- Alloy 作为 Kubernetes 日志采集器，读取 Pod 容器日志并发送到 Loki。
+- Alloy 作为 Kubernetes 日志采集器，通过 Kubernetes API 读取 Pod stdout 日志并发送到 Loki。
 - 不新增 Promtail。Promtail 已进入淘汰路径，新项目直接使用 Alloy。
 - Loki 数据不挂载到宿主机，和 PostgreSQL 学习环境一致，允许随环境重建清理。
 
@@ -59,5 +59,5 @@ Phase 8 将补充 Loki + Alloy：
 ## 已知限制
 
 - Compose 环境 Loki 已部署且 Grafana 已配置 datasource，但 Compose 容器日志**不会自动采集到 Loki**。Compose 的 Loki 验证仅检查服务可用性。
-- K8s 环境通过 Alloy DaemonSet 自动采集 Pod stdout 日志到 Loki。
+- K8s 环境通过单副本 Alloy Deployment 自动采集 Pod stdout 日志到 Loki。
 - Compose 日志自动采集是后续 Phase 的待办事项。
