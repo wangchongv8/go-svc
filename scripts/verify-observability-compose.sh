@@ -79,9 +79,10 @@ else
 fi
 
 echo "--- Loki ---"
-LOKI_READY=$(curl -sf "http://localhost:3100/ready" 2>/dev/null | grep -c "Ready" || echo "0")
+LOKI_READY=$(curl -sf "http://localhost:3100/ready" 2>/dev/null | grep -ci "ready" || echo "0")
+LOKI_READY=$(echo "$LOKI_READY" | tr -d '[:space:]')
 if [ "${LOKI_READY:-0}" -gt 0 ]; then
-  echo "  PASS: Loki ready ($LOKI_READY)"
+  echo "  PASS: Loki ready"
   PASS=$((PASS + 1))
 else
   echo "  FAIL: Loki not ready"
