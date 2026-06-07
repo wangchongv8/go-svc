@@ -39,6 +39,8 @@
 | Prometheus | 指标采集，后续可选 |
 | Grafana | 指标看板，后续可选 |
 | Jaeger | 链路追踪，后续可选 |
+| Loki | 日志存储和 LogQL 查询，后续可选 |
+| Grafana Alloy | 采集 Kubernetes Pod 日志并发送到 Loki，后续可选 |
 
 ## 通信模型
 
@@ -48,6 +50,39 @@
 - Docker Compose 阶段可以使用 etcd 完成 go-zero/gRPC 服务注册与发现。
 - Kubernetes 阶段优先使用 Kubernetes Service + DNS，例如 `user-rpc:9001`，业务服务不直接访问 Kubernetes 内部 etcd。
 - 配置通过本地 YAML、Docker Compose env 和 Kubernetes ConfigMap 分层管理。
+
+## 可观测性模型
+
+项目的可观测性按三类数据拆分：
+
+| 类型 | 组件 | 用途 |
+| --- | --- | --- |
+| Metrics | Prometheus + Grafana | 查看服务健康、请求量、延迟和错误趋势 |
+| Traces | Jaeger + OpenTelemetry | 查看一次请求跨 gateway 和 RPC 服务的调用链 |
+| Logs | Loki + Grafana + Alloy | 检索容器日志，并通过 `trace_id` 和 trace 关联 |
+
+日志链路：
+
+```text
+Go 服务 stdout JSON 日志
+  -> Docker/Kubernetes 容器日志
+  -> Alloy 采集 Pod 日志并补充 namespace/app/pod/container 标签
+  -> Loki 存储日志流并执行 LogQL 查询
+  -> Grafana Explore 作为查询入口
+```
+
+trace 和日志关联原则：
+
+- HTTP 请求和 gRPC 调用链由 OpenTelemetry 生成 trace。
+- gateway-api 应把当前请求的 trace id 返回到 HTTP 响应头，例如 `X-Trace-Id`。
+- 业务关键日志应包含 `trace_id`、`span_id`、`service`、`user_id`、`product_id`、`order_id` 等必要字段。
+- `trace_id` 不作为 Prometheus label，也不建议作为 Loki label；它应保留在 JSON 日志字段中，通过 LogQL 管道解析过滤，避免高基数索引问题。
+
+学习环境存储策略：
+
+- PostgreSQL 不挂载宿主机目录，通过 migration 重建数据。
+- Loki 也不挂载宿主机目录，Compose 使用容器内临时数据，Kubernetes 使用 `emptyDir` 或容器临时存储。
+- 删除 Compose/Kubernetes 环境后，日志和数据库数据都可以被清理。
 
 ## Kubernetes 服务发现边界
 

@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	orderclient "go-svc/apps/order-rpc/orderrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,7 +26,7 @@ func NewGetOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetOrder
 }
 
 func (l *GetOrderLogic) GetOrder(req *types.GetOrderReq) (resp *types.OrderResp, err error) {
-	rpcResp, err := l.svcCtx.OrderRpc.GetOrder(l.ctx, &orderclient.GetOrderRequest{Id: req.ID})
+	rpcResp, err := l.svcCtx.OrderRpc.GetOrder(traceid.WithOutgoingMetadata(l.ctx), &orderclient.GetOrderRequest{Id: req.ID})
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose verify-observability-compose k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s verify-observability-k8s k8s-down ci-check k8s-set-images k8s-rollout-status
+.PHONY: fmt test run run-user-rpc run-product-rpc run-inventory-rpc run-order-rpc run-gateway-api gen db-migrate compose-up compose-down compose-logs compose-ps e2e-compose verify-observability-compose obs-compose-urls obs-k8s-port-forward k8s-build k8s-push k8s-kind-load k8s-up k8s-ps k8s-logs k8s-port-forward e2e-k8s verify-observability-k8s k8s-down ci-check k8s-set-images k8s-rollout-status
 
 fmt:
 	go fmt ./...
@@ -62,6 +62,23 @@ e2e-compose:
 verify-observability-compose:
 	./scripts/verify-observability-compose.sh
 
+obs-compose-urls:
+	@echo "Grafana: http://localhost:3000"
+	@echo "Jaeger:  http://localhost:16686"
+	@echo "Loki:    http://localhost:3100"
+
+obs-k8s-port-forward:
+	@echo "Grafana: http://localhost:3000"
+	@echo "Jaeger:  http://localhost:16686"
+	@echo "Loki:    http://localhost:3100"
+	@echo "Press Ctrl-C to stop all port-forwards"
+	@bash -c '\
+	  trap "kill 0; exit" INT TERM EXIT; \
+	  kubectl port-forward -n $(K8S_NAMESPACE) svc/grafana 3000:3000 & \
+	  kubectl port-forward -n $(K8S_NAMESPACE) svc/jaeger 16686:16686 & \
+	  kubectl port-forward -n $(K8S_NAMESPACE) svc/loki 3100:3100 & \
+	  wait'
+
 # Kubernetes commands
 K8S_NAMESPACE ?= go-svc
 KIND_CLUSTER ?= go-svc
@@ -103,6 +120,9 @@ k8s-up:
 	kubectl apply -f deploy/k8s/gateway-api.yaml
 	kubectl apply -f deploy/k8s/ingress.yaml
 	kubectl apply -f deploy/k8s/observability.yaml
+	kubectl delete daemonset alloy -n $(K8S_NAMESPACE) --ignore-not-found
+	kubectl apply -f deploy/k8s/alloy.yaml
+	kubectl rollout status deployment/alloy -n $(K8S_NAMESPACE) --timeout=120s
 	$(MAKE) k8s-set-images
 	$(MAKE) k8s-rollout-status
 	@echo "All deployments rolled out with IMAGE_TAG=$(IMAGE_TAG)."

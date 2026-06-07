@@ -6,10 +6,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 
 	"go-svc/apps/gateway-api/internal/config"
 	"go-svc/apps/gateway-api/internal/handler"
 	"go-svc/apps/gateway-api/internal/svc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
@@ -25,6 +27,16 @@ func main() {
 
 	server := rest.MustNewServer(c.RestConf)
 	defer server.Stop()
+
+	server.Use(func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			tid, _ := traceid.FromContext(r.Context())
+			if tid != "" {
+				w.Header().Set("X-Trace-Id", tid)
+			}
+			next(w, r)
+		}
+	})
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)

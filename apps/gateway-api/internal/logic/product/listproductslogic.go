@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	productclient "go-svc/apps/product-rpc/productrpc"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,7 +26,7 @@ func NewListProductsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *List
 }
 
 func (l *ListProductsLogic) ListProducts() (resp *types.ListProductsResp, err error) {
-	rpcResp, err := l.svcCtx.ProductRpc.ListProducts(l.ctx, &productclient.ListProductsRequest{})
+	rpcResp, err := l.svcCtx.ProductRpc.ListProducts(traceid.WithOutgoingMetadata(l.ctx), &productclient.ListProductsRequest{})
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,27 @@ data:
   user.k8s.yaml: |
     Name: user.rpc
     ListenOn: 0.0.0.0:9000
+
+    Log:
+      Mode: console
+      Encoding: json
+      Level: info
+      Stat: true
+
+    DevServer:
+      Enable: true
+      Host: 0.0.0.0
+      Port: 6060
+      MetricsPath: /metrics
+      HealthPath: /healthz
+      EnableMetrics: true
+      EnablePprof: true
+
+    Telemetry:
+      Name: user.rpc
+      Endpoint: jaeger:4317
+      Sampler: 1.0
+      Batcher: otlpgrpc
 ---
 apiVersion: v1
 kind: Service

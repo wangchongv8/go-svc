@@ -37,6 +37,7 @@
 | Phase 5 | ✅ 完成 | Kubernetes 部署 (kind + GHCR) |
 | Phase 6 | ✅ 完成 | 可观测性 (日志 + 指标 + Trace) |
 | Phase 7 | ✅ 完成 | GitHub Actions CI + Kuboard 发布管理 |
+| Phase 8 | ✅ 完成 | Loki 日志检索 + trace_id 关联 |
 
 ## 当前决策
 
@@ -358,3 +359,40 @@ make e2e-k8s
 | `make ci-check` | 本地运行 CI 全部检查 |
 | `make k8s-set-images` | 更新 K8s Deployment 镜像 tag |
 | `make k8s-rollout-status` | 查看滚动更新状态 |
+| `make obs-compose-urls` | 打印观测组件本地访问地址 |
+| `make obs-k8s-port-forward` | 启动 K8s 观测组件 port-forward |
+
+## Phase 8: Loki 日志检索 + trace_id 关联
+
+在 Phase 6 基础上补齐日志检索：Loki 存储 + Alloy 采集 + Grafana 统一查询 + X-Trace-Id。
+
+### 观测组件
+
+| 组件 | 端口 | 说明 |
+|------|------|------|
+| Loki | :3100 | 日志存储 + LogQL |
+| Alloy | Deployment | 通过 Kubernetes API 采集 Pod 日志 |
+
+### 日志查询链路
+
+```text
+curl -sD - -o /dev/null -X POST http://localhost:8080/api/v1/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"alice","password":"123456"}'
+
+  → X-Trace-Id: 9dc5cc...
+  → Jaeger: 按 trace ID 查调用链
+  → Grafana Explore → Loki:
+      {namespace="go-svc", app="user-rpc"} | json | trace_id="9dc5cc..."
+```
+
+> 注意：`/healthz` 不产生业务日志，建议用 register/login/createOrder 等端点验证 trace-log 关联。`{app="gateway-api"}` 替换为实际产生日志的服务（如 `user-rpc`、`order-rpc`）。
+
+### LogQL 示例
+
+```logql
+{app="order-rpc"} |= "create order"
+{app="order-rpc"} | json | level="error"
+```
+
+详见 [deploy/observability/README.md](deploy/observability/README.md)

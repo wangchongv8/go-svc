@@ -1177,6 +1177,62 @@ GitHub Actions 验证：
 - 是否没有引入 GitHub Actions 自动部署远端机器。
 - Phase 4/5/6 命令是否没有回退。
 
+## Phase 8: Loki 日志检索 + trace_id 关联
+
+状态：已完成。
+
+详细方案见 [docs/phase-8-log-search-trace-id.md](phase-8-log-search-trace-id.md)。
+
+### Phase 8 目标
+
+在已有 Prometheus/Grafana/Jaeger 基础上补齐日志检索：
+
+- 引入 Loki 作为日志存储和 LogQL 查询后端。
+- 引入 Grafana Alloy 采集 Kubernetes Pod stdout 日志。
+- Grafana 增加 Loki datasource，作为日志查询入口。
+- gateway-api 在 HTTP 响应中返回 `X-Trace-Id`。
+- 业务关键日志写入 `trace_id`，支持从 Jaeger trace 跳到 Loki 日志检索。
+
+### Phase 8 约束
+
+- Claude Code 必须在新分支实现，建议 `feature/phase8-log-search-trace-id`。
+- 不引入 Promtail；新项目直接使用 Alloy。
+- 不引入 ELK/OpenSearch、Tempo、Helm、Argo CD、Flux 或 service mesh。
+- Loki 日志数据不挂载宿主机目录，Compose/K8s 都使用可清理的临时存储。
+- 保持 PostgreSQL 当前不本地持久化、通过 migration 回放重建的策略。
+- `trace_id` 不作为 Prometheus label 或 Loki label，只作为 JSON 日志字段查询。
+
+### Phase 8 验收
+
+```bash
+make fmt
+make test
+git diff --check
+make gen
+docker compose -f deploy/docker-compose/docker-compose.yml config
+kubectl apply --dry-run=client -f deploy/k8s/
+```
+
+如环境可用，还应执行：
+
+```bash
+make compose-up
+make e2e-compose
+make verify-observability-compose
+make compose-down
+
+make k8s-up
+make e2e-k8s
+make verify-observability-k8s
+make k8s-down
+```
+
+验证结束后必须清理 Compose/K8s/port-forward 进程，并复查：
+
+```text
+8080, 9000, 9001, 9002, 9003, 5432, 9090, 3000, 16686, 3100
+```
+
 ## Claude Code Prompt 模板
 
 ```text

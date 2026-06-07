@@ -6,6 +6,7 @@ import (
 	"go-svc/apps/user-rpc/internal/svc"
 	"go-svc/apps/user-rpc/model"
 	"go-svc/apps/user-rpc/user"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -31,11 +32,21 @@ func (l *LoginLogic) Login(in *user.LoginRequest) (*user.LoginResponse, error) {
 	}
 
 	if u.Password != in.Password {
-		l.Errorw("login failed: invalid password", logx.Field("username", in.Username))
+		tid, _ := traceid.FromContext(l.ctx)
+		fields := []logx.LogField{logx.Field("username", in.Username)}
+		if tid != "" {
+			fields = append(fields, logx.Field("trace_id", tid))
+		}
+		l.Errorw("login failed: invalid password", fields...)
 		return nil, rpcError(model.ErrInvalidPassword)
 	}
 
-	l.Infow("login success", logx.Field("user_id", u.ID))
+	tid, sid := traceid.FromContext(l.ctx)
+	fields := []logx.LogField{logx.Field("user_id", u.ID)}
+	if tid != "" {
+		fields = append(fields, logx.Field("trace_id", tid), logx.Field("span_id", sid))
+	}
+	l.Infow("login success", fields...)
 	return &user.LoginResponse{
 		Id: u.ID,
 	}, nil

@@ -5,6 +5,7 @@ import (
 
 	"go-svc/apps/product-rpc/internal/svc"
 	"go-svc/apps/product-rpc/product"
+	"go-svc/pkg/observability/traceid"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -29,7 +30,15 @@ func (l *CreateProductLogic) CreateProduct(in *product.CreateProductRequest) (*p
 		return nil, rpcError(err)
 	}
 
-	l.Infow("product created", logx.Field("product_id", p.ID), logx.Field("name", p.Name))
+	tid, sid := traceid.FromContext(l.ctx)
+	fields := []logx.LogField{
+		logx.Field("product_id", p.ID),
+		logx.Field("name", p.Name),
+	}
+	if tid != "" {
+		fields = append(fields, logx.Field("trace_id", tid), logx.Field("span_id", sid))
+	}
+	l.Infow("product created", fields...)
 
 	return &product.CreateProductResponse{
 		Id:          p.ID,

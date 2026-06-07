@@ -16,13 +16,14 @@
 - PostgreSQL 数据建模和访问。
 - Docker Compose 本地集群。
 - Kubernetes Service、DNS、Ingress、Deployment、ConfigMap、Secret。
+- 可观测性闭环：Prometheus 指标、Jaeger 链路追踪、Loki 日志检索、Grafana 统一查看。
 
 后续可扩展学习目标：
 
 - etcd 服务注册与发现，用于 Docker Compose 阶段理解 go-zero 服务发现。
 - Redis 缓存、幂等或分布式锁。
 - Dockerfile 镜像构建。
-- 日志、指标、链路追踪。
+- 日志、指标、链路追踪和 trace_id 关联检索。
 - 单元测试、集成测试和接口测试。
 
 ## 已确认业务主题
