@@ -6,6 +6,7 @@ package handler
 import (
 	"net/http"
 
+	auth "go-svc/apps/gateway-api/internal/handler/auth"
 	health "go-svc/apps/gateway-api/internal/handler/health"
 	inventory "go-svc/apps/gateway-api/internal/handler/inventory"
 	order "go-svc/apps/gateway-api/internal/handler/order"
@@ -20,6 +21,36 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				Method:  http.MethodPost,
+				Path:    "/auth/login",
+				Handler: auth.AuthLoginHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/auth/register",
+				Handler: auth.AuthRegisterHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodGet,
+					Path:    "/auth/me",
+					Handler: auth.AuthMeHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
 				Method:  http.MethodGet,
 				Path:    "/healthz",
 				Handler: health.HealthzHandler(serverCtx),
@@ -28,12 +59,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodPut,
+					Path:    "/inventories/:product_id",
+					Handler: inventory.SetStockHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
 		[]rest.Route{
-			{
-				Method:  http.MethodPut,
-				Path:    "/inventories/:product_id",
-				Handler: inventory.SetStockHandler(serverCtx),
-			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/inventories/:product_id",
@@ -44,33 +84,50 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	)
 
 	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/orders",
-				Handler: order.CreateOrderHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/orders/:id",
-				Handler: order.GetOrderHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/users/:user_id/orders",
-				Handler: order.ListUserOrdersHandler(serverCtx),
-			},
-		},
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/orders",
+					Handler: order.CreateOrderHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/orders/:id",
+					Handler: order.GetOrderHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodGet,
+					Path:    "/users/:user_id/orders",
+					Handler: order.ListUserOrdersHandler(serverCtx),
+				},
+			}...,
+		),
+		rest.WithPrefix("/api/v1"),
+	)
+
+	server.AddRoutes(
+		rest.WithMiddlewares(
+			[]rest.Middleware{serverCtx.AuthMiddleware},
+			[]rest.Route{
+				{
+					Method:  http.MethodPost,
+					Path:    "/products",
+					Handler: product.CreateProductHandler(serverCtx),
+				},
+				{
+					Method:  http.MethodPatch,
+					Path:    "/products/:id/status",
+					Handler: product.SetProductStatusHandler(serverCtx),
+				},
+			}...,
+		),
 		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
 		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/products",
-				Handler: product.CreateProductHandler(serverCtx),
-			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/products",
@@ -81,27 +138,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Path:    "/products/:id",
 				Handler: product.GetProductHandler(serverCtx),
 			},
-			{
-				Method:  http.MethodPatch,
-				Path:    "/products/:id/status",
-				Handler: product.SetProductStatusHandler(serverCtx),
-			},
 		},
 		rest.WithPrefix("/api/v1"),
 	)
 
 	server.AddRoutes(
 		[]rest.Route{
-			{
-				Method:  http.MethodPost,
-				Path:    "/login",
-				Handler: user.LoginHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/register",
-				Handler: user.RegisterHandler(serverCtx),
-			},
 			{
 				Method:  http.MethodGet,
 				Path:    "/users/:id",

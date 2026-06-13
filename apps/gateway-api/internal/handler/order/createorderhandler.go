@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/zeromicro/go-zero/rest/httpx"
-	"go-svc/apps/gateway-api/internal/handler/httperr"
 	"go-svc/apps/gateway-api/internal/logic/order"
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
@@ -24,7 +23,7 @@ func CreateOrderHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		l := order.NewCreateOrderLogic(r.Context(), svcCtx)
 		resp, err := l.CreateOrder(&req)
 		if err != nil {
-			httperr.Write(w, err)
+			httpx.ErrorCtx(r.Context(), w, err)
 		} else {
 			httpx.OkJsonCtx(r.Context(), w, resp)
 		}

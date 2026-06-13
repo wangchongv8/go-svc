@@ -1,0 +1,39 @@
+---
+# Phase 9: Run kratos migrate sql (separate file for ordered Makefile execution).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kratos-migrate
+  namespace: go-svc
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: oryd/kratos:v1.3.1
+          command:
+            - "kratos"
+            - "migrate"
+            - "sql"
+            - "-e"
+            - "-c"
+            - "/etc/config/kratos/kratos.yml"
+            - "--yes"
+          envFrom:
+            - secretRef:
+                name: kratos-secret
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config/kratos/kratos.yml
+              subPath: kratos.yml
+            - name: identity-schema
+              mountPath: /etc/config/kratos/identity.schema.json
+              subPath: identity.schema.json
+      volumes:
+        - name: config
+          configMap:
+            name: kratos-config
+        - name: identity-schema
+          configMap:
+            name: kratos-identity-schema

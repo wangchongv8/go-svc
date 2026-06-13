@@ -4,25 +4,6 @@ package user;
 
 option go_package = "./user";
 
-message RegisterRequest {
-    string username = 1;
-    string password = 2;
-}
-
-message RegisterResponse {
-    int64  id       = 1;
-    string username = 2;
-}
-
-message LoginRequest {
-    string username = 1;
-    string password = 2;
-}
-
-message LoginResponse {
-    int64 id = 1;
-}
-
 message GetUserRequest {
     int64 id = 1;
 }
@@ -32,8 +13,31 @@ message GetUserResponse {
     string username = 2;
 }
 
+// Phase 9: Kratos identity mapping RPCs.
+
+message GetOrCreateByKratosIdentityRequest {
+    string kratos_identity_id = 1;
+    string username           = 2;
+}
+
+message GetOrCreateByKratosIdentityResponse {
+    int64  id       = 1;
+    string username = 2;
+}
+
+message GetByKratosIdentityRequest {
+    string kratos_identity_id = 1;
+}
+
+message GetByKratosIdentityResponse {
+    int64  id       = 1;
+    string username = 2;
+}
+
 service UserRpc {
-    rpc Register(RegisterRequest) returns (RegisterResponse);
-    rpc Login(LoginRequest) returns (LoginResponse);
     rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+    // Phase 9: Kratos identity ↔ local user mapping.
+    rpc GetOrCreateByKratosIdentity(GetOrCreateByKratosIdentityRequest) returns (GetOrCreateByKratosIdentityResponse);
+    rpc GetByKratosIdentity(GetByKratosIdentityRequest) returns (GetByKratosIdentityResponse);
 }

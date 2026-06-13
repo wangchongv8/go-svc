@@ -3,8 +3,34 @@
 
 package types
 
+type AuthLoginReq struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type AuthLoginResp struct {
+	SessionToken string `json:"session_token,omitempty"`
+	UserID       int64  `json:"user_id"`
+	Username     string `json:"username"`
+}
+
+type AuthMeResp struct {
+	UserID   int64  `json:"user_id"`
+	Username string `json:"username"`
+}
+
+type AuthRegisterReq struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type AuthRegisterResp struct {
+	SessionToken string `json:"session_token,omitempty"`
+	UserID       int64  `json:"user_id"`
+	Username     string `json:"username"`
+}
+
 type CreateOrderReq struct {
-	UserID    int64 `json:"user_id"`
 	ProductID int64 `json:"product_id"`
 	Quantity  int64 `json:"quantity"`
 }
@@ -52,15 +78,6 @@ type ListUserOrdersResp struct {
 	Orders []OrderResp `json:"orders"`
 }
 
-type LoginReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type LoginResp struct {
-	ID int64 `json:"id"`
-}
-
 type OrderResp struct {
 	ID              int64  `json:"id"`
 	UserID          int64  `json:"user_id"`
@@ -78,16 +95,6 @@ type ProductResp struct {
 	Description string `json:"description"`
 	PriceCents  int64  `json:"price_cents"`
 	Status      string `json:"status"`
-}
-
-type RegisterReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type RegisterResp struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
 }
 
 type SetProductStatusReq struct {

@@ -56,15 +56,23 @@ check "Jaeger UI accessible" "jaeger" GET "http://localhost:16686"
 echo "--- Trace ---"
 # Use unique values for rerunnable test
 SUFFIX=$(date +%s)
-REGISTER_RESP=$(curl -sf -X POST "$BASE/api/v1/register" -H 'Content-Type: application/json' \
-  -d "{\"username\":\"trace-${SUFFIX}\",\"password\":\"123456\"}")
-USER_ID=$(echo "$REGISTER_RESP" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
-PRODUCT=$(curl -sf -X POST "$BASE/api/v1/products" -H 'Content-Type: application/json' \
+# Phase 9: use Kratos auth to create an authenticated order trace.
+AUTH_USER="trace-${SUFFIX}"
+AUTH_RESP=$(curl -sf -X POST "$BASE/api/v1/auth/register" -H 'Content-Type: application/json' \
+  -d "{\"username\":\"${AUTH_USER}\",\"password\":\"123456\"}")
+SESSION_TOKEN=$(echo "$AUTH_RESP" | grep -o '"session_token":"[^"]*"' | cut -d'"' -f4)
+PRODUCT=$(curl -sf -X POST "$BASE/api/v1/products" \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
   -d '{"name":"ObsKB","price_cents":100}' | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
-curl -sf -X PUT "$BASE/api/v1/inventories/$PRODUCT" -H 'Content-Type: application/json' \
+curl -sf -X PUT "$BASE/api/v1/inventories/$PRODUCT" \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
   -d '{"stock":5}' >/dev/null
-curl -sf -X POST "$BASE/api/v1/orders" -H 'Content-Type: application/json' \
-  -d "{\"user_id\":$USER_ID,\"product_id\":$PRODUCT,\"quantity\":1}" >/dev/null
+curl -sf -X POST "$BASE/api/v1/orders" \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $SESSION_TOKEN" \
+  -d "{\"product_id\":$PRODUCT,\"quantity\":1}" >/dev/null
 sleep 3
 
 # Check Jaeger has traces for gateway-api

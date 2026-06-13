@@ -13,15 +13,12 @@ import (
 func rpcError(err error) error {
 	switch {
 	case errors.Is(err, model.ErrUsernameEmpty),
-		errors.Is(err, model.ErrPasswordEmpty),
-		errors.Is(err, model.ErrPasswordShort):
+		errors.Is(err, model.ErrKratosIdentityIDEmpty):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, model.ErrUsernameExists):
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, model.ErrUserNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, model.ErrInvalidPassword):
-		return status.Error(codes.Unauthenticated, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}

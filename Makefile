@@ -119,6 +119,15 @@ k8s-up:
 	kubectl apply -f deploy/k8s/order-rpc.yaml
 	kubectl apply -f deploy/k8s/gateway-api.yaml
 	kubectl apply -f deploy/k8s/ingress.yaml
+	# Phase 9 Kratos — strict ordering: configs → create-db → migrate → deployment.
+	kubectl apply -f deploy/k8s/kratos-config.yaml
+	kubectl delete job kratos-create-db -n $(K8S_NAMESPACE) --ignore-not-found
+	kubectl apply -f deploy/k8s/kratos-create-db.yaml
+	kubectl wait --for=condition=complete job/kratos-create-db -n $(K8S_NAMESPACE) --timeout=30s
+	kubectl delete job kratos-migrate -n $(K8S_NAMESPACE) --ignore-not-found
+	kubectl apply -f deploy/k8s/kratos-migrate.yaml
+	kubectl wait --for=condition=complete job/kratos-migrate -n $(K8S_NAMESPACE) --timeout=60s
+	kubectl apply -f deploy/k8s/kratos-deployment.yaml
 	kubectl apply -f deploy/k8s/observability.yaml
 	kubectl delete daemonset alloy -n $(K8S_NAMESPACE) --ignore-not-found
 	kubectl apply -f deploy/k8s/alloy.yaml

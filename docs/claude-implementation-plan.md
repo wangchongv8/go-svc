@@ -1233,6 +1233,190 @@ make k8s-down
 8080, 9000, 9001, 9002, 9003, 5432, 9090, 3000, 16686, 3100
 ```
 
+## Phase 9: Ory Kratos 身份认证接入
+
+状态：规划中。
+
+详细方案见 [docs/phase-9-ory-kratos-auth.md](phase-9-ory-kratos-auth.md)。
+
+### Phase 9 目标
+
+把注册、登录和 session 验证从业务用户服务中拆出，接入 Ory Kratos：
+
+- Kratos 负责 identity、密码凭证、注册登录 flow 和 session。
+- gateway-api 对外提供项目自己的 auth API。
+- gateway-api 通过 Kratos `/sessions/whoami` 校验 `Authorization: Bearer <session_token>`。
+- user-rpc 不再为新 auth 接口保存或校验密码，只维护本地业务用户 profile。
+- 本地业务用户通过 `kratos_identity_id` 映射到 Kratos identity。
+- 至少一个核心业务接口改成依赖认证上下文，优先选择创建订单。
+
+### Phase 9 约束
+
+- Claude Code 必须在新分支实现，建议 `feature/phase9-ory-kratos-auth`。
+- 第一版只做 API flow + session token，不做浏览器登录页。
+- 不引入 OAuth/OIDC 社交登录、MFA、邮箱验证、找回密码、Hydra、Keto、Oathkeeper。
+- Kratos 使用 PostgreSQL，但不能破坏现有业务表。
+- Kratos admin API 不暴露给外部客户端或 Ingress。
+- `session_token`、密码、Authorization header、Cookie 不得写入日志。
+- `kratos_identity_id`、`user_id`、`session_token` 不得作为 Prometheus label。
+- 旧 `/api/v1/register`、`/api/v1/login` 可以暂时保留，但必须标记为 legacy。
+
+### Phase 9 实现范围
+
+基础设施：
+
+- Docker Compose 增加 `kratos` 和 `kratos-migrate`。
+- Kubernetes 增加 Kratos ConfigMap、Secret、Service、Deployment、migration Job。
+- 新增 Kratos 配置和 identity schema，建议路径：
+
+```text
+deploy/kratos/kratos.yml
+deploy/kratos/identity.schema.json
+```
+
+gateway-api：
+
+- 新增：
+
+```text
+POST /api/v1/auth/register
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+```
+
+- 注册/登录通过 Kratos API flow 完成。
+- 登录成功返回 `session_token` 和本地用户 profile。
+- 受保护接口从 `Authorization: Bearer <session_token>` 读取 token。
+- 调 Kratos `/sessions/whoami` 验证 session。
+- 把 `kratos_identity_id` 和本地 `user_id` 放入请求上下文。
+- auth 必须通过 middleware 或 auth-aware handler 实现，不允许在 `gateway.go` 重复注册同一个业务路由。
+- `/api/v1/auth/register` 必须在 Kratos 创建 identity 后调用 user-rpc 创建或获取本地 user profile。
+- `/api/v1/auth/login` 和 `/api/v1/auth/me` 必须返回真实本地 `user.id`，不能返回 placeholder 或 `id=0`。
+
+user-rpc：
+
+- 新增或调整本地用户 profile 映射能力：
+
+```text
+id
+kratos_identity_id
+username
+created_at
+```
+
+- 推荐 RPC：
+
+```text
+GetOrCreateByKratosIdentity(kratos_identity_id, username)
+GetByKratosIdentity(kratos_identity_id)
+GetUser(id)
+```
+
+- 这些必须是 protobuf/zrpc 暴露的真实 RPC 方法，不只是 `UserStore` 内部 helper。
+- 修改 proto 后必须重新生成 pb、grpc、zrpc、server 代码。
+- gateway-api 必须通过生成的 `userrpc` client 调用这些方法。
+
+业务接口：
+
+- 优先改造 `POST /api/v1/orders`：
+  - 必须登录。
+  - 未带 token 返回 401。
+  - 请求体不再信任客户端传入的 `user_id`。
+  - `user_id` 从认证上下文得到。
+  - 只能注册一条 `POST /api/v1/orders` 路由。
+  - 不允许硬编码 `userID := int64(1)`。
+
+### Phase 9 当前实现修复要求
+
+如果当前实现存在以下临时方案，Claude Code 必须删除并替换为正式实现：
+
+- 在 `gateway.go` 里重复注册 `POST /api/v1/orders` 来包 auth。
+- auth middleware 中调用 legacy `Register(username, "kratos-managed")` 来模拟用户映射。
+- auth register/login/me 只返回 username，没有真实 local user id。
+- `CreateOrderLogic` 使用固定 `userID := int64(1)`。
+- user-rpc 只在 `UserStore` 增加 Kratos helper，但没有暴露为 protobuf/zrpc 方法。
+
+正确实现链路：
+
+```text
+register
+  -> Kratos registration flow
+  -> identity.id
+  -> user-rpc.GetOrCreateByKratosIdentity
+  -> return session_token + local user
+
+login
+  -> Kratos login flow
+  -> identity.id
+  -> user-rpc.GetOrCreateByKratosIdentity or GetByKratosIdentity
+  -> return session_token + local user
+
+me
+  -> Kratos /sessions/whoami
+  -> identity.id
+  -> user-rpc.GetByKratosIdentity
+  -> return local user
+
+protected order
+  -> AuthMiddleware
+  -> Kratos /sessions/whoami
+  -> user-rpc identity mapping
+  -> context local user_id
+  -> CreateOrderLogic uses context user_id
+```
+
+### Phase 9 验收
+
+必须执行：
+
+```bash
+make fmt
+go test ./...
+go vet ./...
+docker compose -f deploy/docker-compose/docker-compose.yml config -q
+bash -n scripts/*.sh
+git diff --check
+```
+
+如果 Docker 可用，还应执行：
+
+```bash
+make compose-up
+make e2e-compose
+make compose-down
+```
+
+Compose e2e 至少覆盖：
+
+- `/api/v1/auth/register` 注册。
+- `/api/v1/auth/login` 登录并获取 `session_token`。
+- `/api/v1/auth/me` 带 token 返回 200。
+- 未带 token 创建订单返回 401。
+- 带 token 创建订单成功。
+
+如果 Kubernetes 可用，还应执行：
+
+```bash
+kubectl apply --dry-run=client -f deploy/k8s/
+IMAGE_TAG=<tag> make k8s-up
+make e2e-k8s
+make k8s-down
+```
+
+验证结束后必须清理 Compose/K8s/port-forward 进程，并复查相关端口。
+
+### Phase 9 Review 重点
+
+- Kratos API flow 是否按官方模型实现，没有绕过 flow 或直接操作 Kratos 内部表。
+- session token 是否没有进入日志、metrics、trace attributes。
+- gateway 是否通过 `/sessions/whoami` 做鉴权。
+- 业务接口是否不再信任客户端传入的 `user_id`。
+- 本地 user profile 和 Kratos identity 映射是否唯一且幂等。
+- Compose/K8s Kratos 配置是否一致。
+- Kratos admin API 是否没有暴露给外部入口。
+- 旧 register/login 与新 auth 接口边界是否清楚。
+- e2e 是否覆盖 401 和带 token 成功路径。
+
 ## Claude Code Prompt 模板
 
 ```text

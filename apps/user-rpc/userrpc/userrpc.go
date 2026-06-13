@@ -14,17 +14,18 @@ import (
 )
 
 type (
-	GetUserRequest   = user.GetUserRequest
-	GetUserResponse  = user.GetUserResponse
-	LoginRequest     = user.LoginRequest
-	LoginResponse    = user.LoginResponse
-	RegisterRequest  = user.RegisterRequest
-	RegisterResponse = user.RegisterResponse
+	GetByKratosIdentityRequest          = user.GetByKratosIdentityRequest
+	GetByKratosIdentityResponse         = user.GetByKratosIdentityResponse
+	GetOrCreateByKratosIdentityRequest  = user.GetOrCreateByKratosIdentityRequest
+	GetOrCreateByKratosIdentityResponse = user.GetOrCreateByKratosIdentityResponse
+	GetUserRequest                      = user.GetUserRequest
+	GetUserResponse                     = user.GetUserResponse
 
 	UserRpc interface {
-		Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-		Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 		GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+		// Phase 9: Kratos identity ↔ local user mapping.
+		GetOrCreateByKratosIdentity(ctx context.Context, in *GetOrCreateByKratosIdentityRequest, opts ...grpc.CallOption) (*GetOrCreateByKratosIdentityResponse, error)
+		GetByKratosIdentity(ctx context.Context, in *GetByKratosIdentityRequest, opts ...grpc.CallOption) (*GetByKratosIdentityResponse, error)
 	}
 
 	defaultUserRpc struct {
@@ -38,17 +39,18 @@ func NewUserRpc(cli zrpc.Client) UserRpc {
 	}
 }
 
-func (m *defaultUserRpc) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
-	client := user.NewUserRpcClient(m.cli.Conn())
-	return client.Register(ctx, in, opts...)
-}
-
-func (m *defaultUserRpc) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
-	client := user.NewUserRpcClient(m.cli.Conn())
-	return client.Login(ctx, in, opts...)
-}
-
 func (m *defaultUserRpc) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
 	client := user.NewUserRpcClient(m.cli.Conn())
 	return client.GetUser(ctx, in, opts...)
+}
+
+// Phase 9: Kratos identity ↔ local user mapping.
+func (m *defaultUserRpc) GetOrCreateByKratosIdentity(ctx context.Context, in *GetOrCreateByKratosIdentityRequest, opts ...grpc.CallOption) (*GetOrCreateByKratosIdentityResponse, error) {
+	client := user.NewUserRpcClient(m.cli.Conn())
+	return client.GetOrCreateByKratosIdentity(ctx, in, opts...)
+}
+
+func (m *defaultUserRpc) GetByKratosIdentity(ctx context.Context, in *GetByKratosIdentityRequest, opts ...grpc.CallOption) (*GetByKratosIdentityResponse, error) {
+	client := user.NewUserRpcClient(m.cli.Conn())
+	return client.GetByKratosIdentity(ctx, in, opts...)
 }

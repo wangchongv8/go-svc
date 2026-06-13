@@ -25,6 +25,46 @@ services:
     environment:
       PGPASSWORD: postgres
 
+  kratos-create-db:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "psql -h postgres -U postgres -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = 'kratos'\" | grep -q 1 || psql -h postgres -U postgres -d postgres -c \"CREATE DATABASE kratos\""]
+    environment:
+      PGPASSWORD: postgres
+
+  kratos-migrate:
+    image: oryd/kratos:v1.3.1
+    depends_on:
+      kratos-create-db:
+        condition: service_completed_successfully
+    entrypoint: ["kratos", "migrate", "sql", "-e", "-c", "/etc/config/kratos/kratos.yml", "--yes"]
+    volumes:
+      - ../../deploy/kratos:/etc/config/kratos:ro
+    environment:
+      DSN: "postgres://postgres:postgres@postgres:5432/kratos?sslmode=disable"
+
+  kratos:
+    image: oryd/kratos:v1.3.1
+    depends_on:
+      kratos-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ../../deploy/kratos:/etc/config/kratos:ro
+    command:
+      - "serve"
+      - "-c"
+      - "/etc/config/kratos/kratos.yml"
+      - "--dev"
+      - "--watch-courier"
+    ports:
+      - "4433:4433"
+      - "4434:4434"
+    environment:
+      DSN: "postgres://postgres:postgres@postgres:5432/kratos?sslmode=disable"
+      LOG_LEVEL: info
+
   user-rpc:
     platform: linux/amd64
     build:
@@ -138,4 +178,3 @@ services:
     ports:
       - "16686:16686"
       - "4317:4317"
-

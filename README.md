@@ -38,6 +38,7 @@
 | Phase 6 | ✅ 完成 | 可观测性 (日志 + 指标 + Trace) |
 | Phase 7 | ✅ 完成 | GitHub Actions CI + Kuboard 发布管理 |
 | Phase 8 | ✅ 完成 | Loki 日志检索 + trace_id 关联 |
+| Phase 9 | 🚧 实现中 | Ory Kratos 身份认证接入 |
 
 ## 当前决策
 
@@ -45,6 +46,7 @@
 - HTTP 服务：使用 go-zero API。
 - 内部 RPC：使用 gRPC。
 - 数据库：PostgreSQL。
+- 身份认证：Phase 9 计划引入 Ory Kratos，负责注册、登录和 session 验证。
 - 本地服务发现：Docker Compose 阶段可以用 etcd 学习 go-zero 服务注册与发现。
 - Kubernetes 服务发现：优先使用 Kubernetes Service + DNS，不让业务服务直接依赖 etcd。
 
@@ -98,8 +100,9 @@ curl → gateway-api (:8080, HTTP)
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/healthz` | 健康检查 |
-| POST | `/api/v1/register` | 用户注册 |
-| POST | `/api/v1/login` | 用户登录 |
+| POST | `/api/v1/auth/register` | 用户注册 (Kratos) |
+| POST | `/api/v1/auth/login` | 用户登录 (Kratos) |
+| GET | `/api/v1/auth/me` | 当前用户信息 |
 | GET | `/api/v1/users/:id` | 获取用户信息 |
 
 ### 快速开始
@@ -121,15 +124,20 @@ make run-gateway-api
 curl http://localhost:8080/healthz
 # → {"status":"ok"}
 
-curl -X POST http://localhost:8080/api/v1/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"username":"alice","password":"123456"}'
-# → {"id":1,"username":"alice"}
+# → {"session_token":"...","user_id":1,"username":"alice"}
 
-curl -X POST http://localhost:8080/api/v1/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"alice","password":"123456"}'
-# → {"id":1}
+# → {"session_token":"...","user_id":1,"username":"alice"}
+
+# 以下请求需要认证
+TOKEN="<session_token from register/login>"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/auth/me
+# → {"user_id":1,"username":"alice"}
 
 curl http://localhost:8080/api/v1/users/1
 # → {"id":1,"username":"alice"}
@@ -169,19 +177,27 @@ curl http://localhost:8080/api/v1/users/1
 ### 下单 curl 示例
 
 ```bash
+# 创建商品和设置库存需要认证
+TOKEN="<session_token from register/login>"
+
 curl -X POST localhost:8080/api/v1/products \
   -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"name":"Keyboard","price_cents":19900}'
 
 curl -X PUT localhost:8080/api/v1/inventories/1 \
-  -H 'Content-Type: application/json' -d '{"stock":10}'
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"stock":10}'
 
+# user_id 由 AuthMiddleware 从 Kratos session 注入，无需手动传
 curl -X POST localhost:8080/api/v1/orders \
   -H 'Content-Type: application/json' \
-  -d '{"user_id":1,"product_id":1,"quantity":2}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"product_id":1,"quantity":2}'
 
-curl localhost:8080/api/v1/orders/1
-curl localhost:8080/api/v1/users/1/orders
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/api/v1/orders/1
+curl -H "Authorization: Bearer $TOKEN" localhost:8080/api/v1/users/1/orders
 ```
 
 ### 已知限制
@@ -326,6 +342,49 @@ kubectl port-forward -n go-svc svc/jaeger 16686:16686
 
 详见 [deploy/observability/README.md](deploy/observability/README.md)
 
+## Phase 9: Ory Kratos 身份认证接入
+
+Ory Kratos 负责注册、登录和 session 验证。gateway-api 通过 Kratos API flow 提供 `/api/v1/auth/*` 端点。
+
+### 新增端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/auth/register` | 新用户注册（通过 Kratos） |
+| POST | `/api/v1/auth/login` | 登录返回 session_token |
+| GET | `/api/v1/auth/me` | 验证当前 session |
+
+### 认证流程
+
+```text
+POST /api/v1/auth/register (username, password)
+  → Kratos 创建 identity
+  → 返回 session_token
+
+Authorization: Bearer <session_token>
+  → gateway 调用 Kratos /sessions/whoami 验证
+  → 业务端点从认证上下文获取 user_id
+```
+
+### 架构
+
+```
+client → gateway-api
+          ├── Kratos (:4433)  身份注册/登录/Session
+          └── user-rpc        本地业务 profile
+```
+
+### 受保护端点
+
+以下写操作需要 `Authorization: Bearer <session_token>`：
+- `POST /api/v1/products`、`PATCH /api/v1/products/:id/status`
+- `PUT /api/v1/inventories/:product_id`
+- `POST /api/v1/orders`、`GET /api/v1/orders/:id`、`GET /api/v1/users/:user_id/orders`
+
+读操作（商品列表/详情、库存查询、用户查询）保持公开。
+
+详见 [docs/phase-9-ory-kratos-auth.md](docs/phase-9-ory-kratos-auth.md)。
+
 ## Phase 7: GitHub Actions CI + 发布
 
 Git push 自动触发 CI 检查，main 分支自动构建镜像推送到 GHCR。
@@ -376,7 +435,7 @@ make e2e-k8s
 ### 日志查询链路
 
 ```text
-curl -sD - -o /dev/null -X POST http://localhost:8080/api/v1/register \
+curl -sD - -o /dev/null -X POST http://localhost:8080/api/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"username":"alice","password":"123456"}'
 
@@ -386,7 +445,7 @@ curl -sD - -o /dev/null -X POST http://localhost:8080/api/v1/register \
       {namespace="go-svc", app="user-rpc"} | json | trace_id="9dc5cc..."
 ```
 
-> 注意：`/healthz` 不产生业务日志，建议用 register/login/createOrder 等端点验证 trace-log 关联。`{app="gateway-api"}` 替换为实际产生日志的服务（如 `user-rpc`、`order-rpc`）。
+> 注意：`/healthz` 不产生业务日志，建议用 `/api/v1/auth/register`、`/api/v1/auth/login` 或 createOrder 等端点验证 trace-log 关联。`{app="gateway-api"}` 替换为实际产生日志的服务（如 `user-rpc`、`order-rpc`）。
 
 ### LogQL 示例
 

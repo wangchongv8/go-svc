@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	rest.RestConf
+	KratosURL        string
 	UserRpcConf      zrpc.RpcClientConf
 	ProductRpcConf   zrpc.RpcClientConf
 	InventoryRpcConf zrpc.RpcClientConf

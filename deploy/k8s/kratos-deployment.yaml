@@ -1,0 +1,63 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kratos-public
+  namespace: go-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: kratos
+  ports:
+    - name: public
+      port: 4433
+      targetPort: 4433
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kratos
+  namespace: go-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kratos
+  template:
+    metadata:
+      labels:
+        app: kratos
+    spec:
+      containers:
+        - name: kratos
+          image: oryd/kratos:v1.3.1
+          command:
+            - "serve"
+            - "-c"
+            - "/etc/config/kratos/kratos.yml"
+            - "--dev"
+            - "--watch-courier"
+          envFrom:
+            - secretRef:
+                name: kratos-secret
+          volumeMounts:
+            - name: config
+              mountPath: /etc/config/kratos/kratos.yml
+              subPath: kratos.yml
+            - name: identity-schema
+              mountPath: /etc/config/kratos/identity.schema.json
+              subPath: identity.schema.json
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: kratos-config
+        - name: identity-schema
+          configMap:
+            name: kratos-identity-schema

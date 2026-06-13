@@ -15,9 +15,9 @@ import (
 func TestGetUserLogic_Success(t *testing.T) {
 	svcCtx := svc.NewServiceContext(config.Config{})
 
-	reg, _ := NewRegisterLogic(context.Background(), svcCtx).Register(&user.RegisterRequest{
-		Username: "alice",
-		Password: "123456",
+	reg, _ := NewGetOrCreateByKratosIdentityLogic(context.Background(), svcCtx).GetOrCreateByKratosIdentity(&user.GetOrCreateByKratosIdentityRequest{
+		KratosIdentityId: "kratos-test-1",
+		Username:         "alice",
 	})
 
 	resp, err := NewGetUserLogic(context.Background(), svcCtx).GetUser(&user.GetUserRequest{

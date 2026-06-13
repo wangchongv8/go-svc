@@ -1,0 +1,40 @@
+serve:
+  public:
+    base_url: http://127.0.0.1:4433/
+  admin:
+    base_url: http://127.0.0.1:4434/
+
+selfservice:
+  default_browser_return_url: http://127.0.0.1:8080/
+  allowed_return_urls:
+    - http://127.0.0.1:8080/
+  flows:
+    settings:
+      ui_url: http://127.0.0.1:8080/settings
+    recovery:
+      ui_url: http://127.0.0.1:8080/recovery
+    verification:
+      ui_url: http://127.0.0.1:8080/verify
+
+identity:
+  default_schema_id: default
+  schemas:
+    - id: default
+      url: file:///etc/config/kratos/identity.schema.json
+
+courier:
+  smtp:
+    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+
+dsn: "postgres://postgres:postgres@postgres:5432/kratos?sslmode=disable"
+
+hashers:
+  algorithm: bcrypt
+
+secrets:
+  default:
+    - dev-secret-not-for-production
+
+log:
+  level: info
+  format: json

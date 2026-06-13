@@ -17,6 +17,7 @@
 - Docker Compose 本地集群。
 - Kubernetes Service、DNS、Ingress、Deployment、ConfigMap、Secret。
 - 可观测性闭环：Prometheus 指标、Jaeger 链路追踪、Loki 日志检索、Grafana 统一查看。
+- 身份认证系统接入：使用 Ory Kratos 学习注册、登录、session 验证和业务用户映射。
 
 后续可扩展学习目标：
 
@@ -24,6 +25,7 @@
 - Redis 缓存、幂等或分布式锁。
 - Dockerfile 镜像构建。
 - 日志、指标、链路追踪和 trace_id 关联检索。
+- 独立身份系统与业务用户系统的边界，例如 Kratos identity 和本地 user profile 映射。
 - 单元测试、集成测试和接口测试。
 
 ## 已确认业务主题
@@ -41,8 +43,8 @@
 
 ### 用户
 
-- 用户注册。
-- 用户登录。
+- 用户注册：前期由 `user-rpc` 实现，Phase 9 起规划迁移到 Ory Kratos。
+- 用户登录：前期由 `user-rpc` 实现，Phase 9 起规划迁移到 Ory Kratos。
 - 查看当前用户信息。
 
 ### 商品
@@ -108,7 +110,7 @@
 ### 业务范围
 
 - 是否需要前端页面，还是只做后端 API？
-- 登录鉴权先使用简单 token，还是引入 JWT？
+- 登录鉴权是否继续使用自研 token？已倾向 Phase 9 引入 Ory Kratos，第一版使用 API flow + session token。
 - 商品创建和上下架是否需要管理身份？
 
 ### 学习优先级

@@ -7,23 +7,34 @@ info (
 	version: "v1"
 )
 
+// ---------- auth types (Phase 9: Kratos) ----------
+type (
+	AuthRegisterReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	AuthRegisterResp {
+		SessionToken string `json:"session_token,omitempty"`
+		UserID       int64  `json:"user_id"`
+		Username     string `json:"username"`
+	}
+	AuthLoginReq {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	AuthLoginResp {
+		SessionToken string `json:"session_token,omitempty"`
+		UserID       int64  `json:"user_id"`
+		Username     string `json:"username"`
+	}
+	AuthMeResp {
+		UserID   int64  `json:"user_id"`
+		Username string `json:"username"`
+	}
+)
+
 // ---------- user types ----------
 type (
-	RegisterReq {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	RegisterResp {
-		ID       int64  `json:"id"`
-		Username string `json:"username"`
-	}
-	LoginReq {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	LoginResp {
-		ID int64 `json:"id"`
-	}
 	GetUserReq {
 		ID int64 `path:"id"`
 	}
@@ -80,7 +91,6 @@ type (
 // ---------- order types ----------
 type (
 	CreateOrderReq {
-		UserID    int64 `json:"user_id"`
 		ProductID int64 `json:"product_id"`
 		Quantity  int64 `json:"quantity"`
 	}
@@ -106,54 +116,91 @@ type (
 )
 
 // ---------- service blocks ----------
+// Auth public — register and login.
+@server (
+	prefix: /api/v1
+	group:  auth
+)
+service gateway-api {
+	@handler authRegister
+	post /auth/register (AuthRegisterReq) returns (AuthRegisterResp)
+
+	@handler authLogin
+	post /auth/login (AuthLoginReq) returns (AuthLoginResp)
+}
+
+// Auth protected — current user profile (reads from middleware context).
+@server (
+	prefix:     /api/v1
+	group:      auth
+	middleware: AuthMiddleware
+)
+service gateway-api {
+	@handler authMe
+	get /auth/me returns (AuthMeResp)
+}
+
 @server (
 	prefix: /api/v1
 	group:  user
 )
 service gateway-api {
-	@handler register
-	post /register (RegisterReq) returns (RegisterResp)
-
-	@handler login
-	post /login (LoginReq) returns (LoginResp)
-
 	@handler getUser
 	get /users/:id (GetUserReq) returns (GetUserResp)
 }
 
+// Product write operations — require auth.
 @server (
-	prefix: /api/v1
-	group:  product
+	prefix:     /api/v1
+	group:      product
+	middleware: AuthMiddleware
 )
 service gateway-api {
 	@handler createProduct
 	post /products (CreateProductReq) returns (ProductResp)
 
+	@handler setProductStatus
+	patch /products/:id/status (SetProductStatusReq) returns (ProductResp)
+}
+
+// Product read operations — public.
+@server (
+	prefix: /api/v1
+	group:  product
+)
+service gateway-api {
 	@handler listProducts
 	get /products returns (ListProductsResp)
 
 	@handler getProduct
 	get /products/:id (GetProductReq) returns (ProductResp)
-
-	@handler setProductStatus
-	patch /products/:id/status (SetProductStatusReq) returns (ProductResp)
 }
 
+// Inventory write operations — require auth.
+@server (
+	prefix:     /api/v1
+	group:      inventory
+	middleware: AuthMiddleware
+)
+service gateway-api {
+	@handler setStock
+	put /inventories/:product_id (SetStockReq) returns (StockResp)
+}
+
+// Inventory read operations — public.
 @server (
 	prefix: /api/v1
 	group:  inventory
 )
 service gateway-api {
-	@handler setStock
-	put /inventories/:product_id (SetStockReq) returns (StockResp)
-
 	@handler getStock
 	get /inventories/:product_id (GetStockReq) returns (StockResp)
 }
 
 @server (
-	prefix: /api/v1
-	group:  order
+	prefix:     /api/v1
+	group:      order
+	middleware: AuthMiddleware
 )
 service gateway-api {
 	@handler createOrder

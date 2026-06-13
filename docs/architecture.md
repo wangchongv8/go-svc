@@ -41,6 +41,7 @@
 | Jaeger | 链路追踪，后续可选 |
 | Loki | 日志存储和 LogQL 查询，后续可选 |
 | Grafana Alloy | 采集 Kubernetes Pod 日志并发送到 Loki，后续可选 |
+| Ory Kratos | 注册、登录、身份和 session 验证，Phase 9 引入 |
 
 ## 通信模型
 
@@ -50,6 +51,38 @@
 - Docker Compose 阶段可以使用 etcd 完成 go-zero/gRPC 服务注册与发现。
 - Kubernetes 阶段优先使用 Kubernetes Service + DNS，例如 `user-rpc:9001`，业务服务不直接访问 Kubernetes 内部 etcd。
 - 配置通过本地 YAML、Docker Compose env 和 Kubernetes ConfigMap 分层管理。
+
+## 身份认证模型
+
+Phase 9 规划引入 Ory Kratos，把身份认证从业务用户服务中拆出：
+
+```text
+client
+  -> gateway-api
+     -> Kratos public API: registration, login, sessions/whoami
+     -> user-rpc: local business user profile
+     -> other RPC services
+```
+
+边界原则：
+
+- Kratos 负责 identity、密码凭证、注册登录 flow 和 session。
+- `gateway-api` 负责对外暴露项目自己的 `/api/v1/auth/*` 接口，并调用 Kratos public API。
+- `user-rpc` 不再为新认证接口保存或校验密码，只保留业务用户资料。
+- 本地业务用户通过 `kratos_identity_id` 映射到 Kratos identity。
+- 业务接口不应信任客户端传入的 `user_id`；应从已验证的 session 上下文中解析当前用户。
+
+注册和登录的业务边界：
+
+```text
+Kratos 管：identity、密码、session。
+user-rpc 管：local user_id、业务用户资料、kratos_identity_id 映射。
+gateway-api 管：把 Kratos session 转换成本地 user_id 并写入 context。
+```
+
+因此 `/api/v1/auth/register` 不能只创建 Kratos identity。它必须在 Kratos 注册成功后调用 `user-rpc.GetOrCreateByKratosIdentity`，创建或返回本地业务用户，再把真实本地 `user.id` 返回给客户端。
+
+第一版只做 API flow + session token，不做浏览器登录页、OAuth、MFA、邮箱验证、找回密码、Hydra、Keto 或 Oathkeeper。
 
 ## 可观测性模型
 

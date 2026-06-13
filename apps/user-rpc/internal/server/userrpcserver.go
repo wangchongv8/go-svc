@@ -23,17 +23,18 @@ func NewUserRpcServer(svcCtx *svc.ServiceContext) *UserRpcServer {
 	}
 }
 
-func (s *UserRpcServer) Register(ctx context.Context, in *user.RegisterRequest) (*user.RegisterResponse, error) {
-	l := logic.NewRegisterLogic(ctx, s.svcCtx)
-	return l.Register(in)
-}
-
-func (s *UserRpcServer) Login(ctx context.Context, in *user.LoginRequest) (*user.LoginResponse, error) {
-	l := logic.NewLoginLogic(ctx, s.svcCtx)
-	return l.Login(in)
-}
-
 func (s *UserRpcServer) GetUser(ctx context.Context, in *user.GetUserRequest) (*user.GetUserResponse, error) {
 	l := logic.NewGetUserLogic(ctx, s.svcCtx)
 	return l.GetUser(in)
+}
+
+// Phase 9: Kratos identity ↔ local user mapping.
+func (s *UserRpcServer) GetOrCreateByKratosIdentity(ctx context.Context, in *user.GetOrCreateByKratosIdentityRequest) (*user.GetOrCreateByKratosIdentityResponse, error) {
+	l := logic.NewGetOrCreateByKratosIdentityLogic(ctx, s.svcCtx)
+	return l.GetOrCreateByKratosIdentity(in)
+}
+
+func (s *UserRpcServer) GetByKratosIdentity(ctx context.Context, in *user.GetByKratosIdentityRequest) (*user.GetByKratosIdentityResponse, error) {
+	l := logic.NewGetByKratosIdentityLogic(ctx, s.svcCtx)
+	return l.GetByKratosIdentity(in)
 }

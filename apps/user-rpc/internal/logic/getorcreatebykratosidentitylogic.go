@@ -10,22 +10,22 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 )
 
-type RegisterLogic struct {
+type GetOrCreateByKratosIdentityLogic struct {
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	logx.Logger
 }
 
-func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RegisterLogic {
-	return &RegisterLogic{
+func NewGetOrCreateByKratosIdentityLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetOrCreateByKratosIdentityLogic {
+	return &GetOrCreateByKratosIdentityLogic{
 		ctx:    ctx,
 		svcCtx: svcCtx,
 		Logger: logx.WithContext(ctx),
 	}
 }
 
-func (l *RegisterLogic) Register(in *user.RegisterRequest) (*user.RegisterResponse, error) {
-	u, err := l.svcCtx.UserStore.Create(in.Username, in.Password)
+func (l *GetOrCreateByKratosIdentityLogic) GetOrCreateByKratosIdentity(in *user.GetOrCreateByKratosIdentityRequest) (*user.GetOrCreateByKratosIdentityResponse, error) {
+	u, err := l.svcCtx.UserStore.GetOrCreateByKratosIdentity(in.KratosIdentityId, in.Username)
 	if err != nil {
 		return nil, rpcError(err)
 	}
@@ -34,13 +34,14 @@ func (l *RegisterLogic) Register(in *user.RegisterRequest) (*user.RegisterRespon
 	fields := []logx.LogField{
 		logx.Field("user_id", u.ID),
 		logx.Field("username", u.Username),
+		logx.Field("kratos_identity_id", in.KratosIdentityId),
 	}
 	if tid != "" {
 		fields = append(fields, logx.Field("trace_id", tid), logx.Field("span_id", sid))
 	}
-	l.Infow("user registered", fields...)
+	l.Infow("get or create by kratos identity", fields...)
 
-	return &user.RegisterResponse{
+	return &user.GetOrCreateByKratosIdentityResponse{
 		Id:       u.ID,
 		Username: u.Username,
 	}, nil

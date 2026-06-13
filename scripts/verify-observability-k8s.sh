@@ -84,8 +84,9 @@ fi
 
 echo "--- Loki Logs ---"
 SUFFIX="$(date +%s)-$$"
+# Phase 9: use /api/v1/auth/register to produce trace + logs.
 REGISTER_HEADERS=$(curl -sD - -o /dev/null \
-  -X POST "http://localhost:$GATEWAY_PORT/api/v1/register" \
+  -X POST "http://localhost:$GATEWAY_PORT/api/v1/auth/register" \
   -H 'Content-Type: application/json' \
   -d "{\"username\":\"trace-k8s-${SUFFIX}\",\"password\":\"123456\"}" 2>/dev/null || echo "")
 TRACE_ID=$(echo "$REGISTER_HEADERS" | grep -i "X-Trace-Id:" | awk '{print $2}' | tr -d '\r')

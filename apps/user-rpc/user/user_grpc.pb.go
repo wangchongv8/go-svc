@@ -19,18 +19,19 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserRpc_Register_FullMethodName = "/user.UserRpc/Register"
-	UserRpc_Login_FullMethodName    = "/user.UserRpc/Login"
-	UserRpc_GetUser_FullMethodName  = "/user.UserRpc/GetUser"
+	UserRpc_GetUser_FullMethodName                     = "/user.UserRpc/GetUser"
+	UserRpc_GetOrCreateByKratosIdentity_FullMethodName = "/user.UserRpc/GetOrCreateByKratosIdentity"
+	UserRpc_GetByKratosIdentity_FullMethodName         = "/user.UserRpc/GetByKratosIdentity"
 )
 
 // UserRpcClient is the client API for UserRpc service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserRpcClient interface {
-	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
+	// Phase 9: Kratos identity ↔ local user mapping.
+	GetOrCreateByKratosIdentity(ctx context.Context, in *GetOrCreateByKratosIdentityRequest, opts ...grpc.CallOption) (*GetOrCreateByKratosIdentityResponse, error)
+	GetByKratosIdentity(ctx context.Context, in *GetByKratosIdentityRequest, opts ...grpc.CallOption) (*GetByKratosIdentityResponse, error)
 }
 
 type userRpcClient struct {
@@ -39,26 +40,6 @@ type userRpcClient struct {
 
 func NewUserRpcClient(cc grpc.ClientConnInterface) UserRpcClient {
 	return &userRpcClient{cc}
-}
-
-func (c *userRpcClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterResponse)
-	err := c.cc.Invoke(ctx, UserRpc_Register_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userRpcClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LoginResponse)
-	err := c.cc.Invoke(ctx, UserRpc_Login_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *userRpcClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
@@ -71,13 +52,34 @@ func (c *userRpcClient) GetUser(ctx context.Context, in *GetUserRequest, opts ..
 	return out, nil
 }
 
+func (c *userRpcClient) GetOrCreateByKratosIdentity(ctx context.Context, in *GetOrCreateByKratosIdentityRequest, opts ...grpc.CallOption) (*GetOrCreateByKratosIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrCreateByKratosIdentityResponse)
+	err := c.cc.Invoke(ctx, UserRpc_GetOrCreateByKratosIdentity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userRpcClient) GetByKratosIdentity(ctx context.Context, in *GetByKratosIdentityRequest, opts ...grpc.CallOption) (*GetByKratosIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetByKratosIdentityResponse)
+	err := c.cc.Invoke(ctx, UserRpc_GetByKratosIdentity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserRpcServer is the server API for UserRpc service.
 // All implementations must embed UnimplementedUserRpcServer
 // for forward compatibility.
 type UserRpcServer interface {
-	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
+	// Phase 9: Kratos identity ↔ local user mapping.
+	GetOrCreateByKratosIdentity(context.Context, *GetOrCreateByKratosIdentityRequest) (*GetOrCreateByKratosIdentityResponse, error)
+	GetByKratosIdentity(context.Context, *GetByKratosIdentityRequest) (*GetByKratosIdentityResponse, error)
 	mustEmbedUnimplementedUserRpcServer()
 }
 
@@ -88,14 +90,14 @@ type UserRpcServer interface {
 // pointer dereference when methods are called.
 type UnimplementedUserRpcServer struct{}
 
-func (UnimplementedUserRpcServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
-}
-func (UnimplementedUserRpcServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
-}
 func (UnimplementedUserRpcServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUser not implemented")
+}
+func (UnimplementedUserRpcServer) GetOrCreateByKratosIdentity(context.Context, *GetOrCreateByKratosIdentityRequest) (*GetOrCreateByKratosIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrCreateByKratosIdentity not implemented")
+}
+func (UnimplementedUserRpcServer) GetByKratosIdentity(context.Context, *GetByKratosIdentityRequest) (*GetByKratosIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetByKratosIdentity not implemented")
 }
 func (UnimplementedUserRpcServer) mustEmbedUnimplementedUserRpcServer() {}
 func (UnimplementedUserRpcServer) testEmbeddedByValue()                 {}
@@ -118,42 +120,6 @@ func RegisterUserRpcServer(s grpc.ServiceRegistrar, srv UserRpcServer) {
 	s.RegisterService(&UserRpc_ServiceDesc, srv)
 }
 
-func _UserRpc_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserRpcServer).Register(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserRpc_Register_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserRpcServer).Register(ctx, req.(*RegisterRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserRpc_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LoginRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserRpcServer).Login(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserRpc_Login_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserRpcServer).Login(ctx, req.(*LoginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _UserRpc_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUserRequest)
 	if err := dec(in); err != nil {
@@ -172,6 +138,42 @@ func _UserRpc_GetUser_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserRpc_GetOrCreateByKratosIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrCreateByKratosIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserRpcServer).GetOrCreateByKratosIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserRpc_GetOrCreateByKratosIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserRpcServer).GetOrCreateByKratosIdentity(ctx, req.(*GetOrCreateByKratosIdentityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserRpc_GetByKratosIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetByKratosIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserRpcServer).GetByKratosIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserRpc_GetByKratosIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserRpcServer).GetByKratosIdentity(ctx, req.(*GetByKratosIdentityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserRpc_ServiceDesc is the grpc.ServiceDesc for UserRpc service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -180,16 +182,16 @@ var UserRpc_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*UserRpcServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Register",
-			Handler:    _UserRpc_Register_Handler,
-		},
-		{
-			MethodName: "Login",
-			Handler:    _UserRpc_Login_Handler,
-		},
-		{
 			MethodName: "GetUser",
 			Handler:    _UserRpc_GetUser_Handler,
+		},
+		{
+			MethodName: "GetOrCreateByKratosIdentity",
+			Handler:    _UserRpc_GetOrCreateByKratosIdentity_Handler,
+		},
+		{
+			MethodName: "GetByKratosIdentity",
+			Handler:    _UserRpc_GetByKratosIdentity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

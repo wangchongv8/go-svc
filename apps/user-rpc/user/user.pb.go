@@ -21,206 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type RegisterRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterRequest) Reset() {
-	*x = RegisterRequest{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterRequest) ProtoMessage() {}
-
-func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
-func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *RegisterRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *RegisterRequest) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-type RegisterResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RegisterResponse) Reset() {
-	*x = RegisterResponse{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RegisterResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RegisterResponse) ProtoMessage() {}
-
-func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
-func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *RegisterResponse) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
-func (x *RegisterResponse) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type LoginRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LoginRequest) Reset() {
-	*x = LoginRequest{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LoginRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LoginRequest) ProtoMessage() {}
-
-func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
-func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *LoginRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *LoginRequest) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LoginResponse) Reset() {
-	*x = LoginResponse{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LoginResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LoginResponse) ProtoMessage() {}
-
-func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
-func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *LoginResponse) GetId() int64 {
-	if x != nil {
-		return x.Id
-	}
-	return 0
-}
-
 type GetUserRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -230,7 +30,7 @@ type GetUserRequest struct {
 
 func (x *GetUserRequest) Reset() {
 	*x = GetUserRequest{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[4]
+	mi := &file_apps_user_rpc_user_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -242,7 +42,7 @@ func (x *GetUserRequest) String() string {
 func (*GetUserRequest) ProtoMessage() {}
 
 func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[4]
+	mi := &file_apps_user_rpc_user_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -255,7 +55,7 @@ func (x *GetUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserRequest.ProtoReflect.Descriptor instead.
 func (*GetUserRequest) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{4}
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *GetUserRequest) GetId() int64 {
@@ -275,7 +75,7 @@ type GetUserResponse struct {
 
 func (x *GetUserResponse) Reset() {
 	*x = GetUserResponse{}
-	mi := &file_apps_user_rpc_user_proto_msgTypes[5]
+	mi := &file_apps_user_rpc_user_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -287,7 +87,7 @@ func (x *GetUserResponse) String() string {
 func (*GetUserResponse) ProtoMessage() {}
 
 func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_apps_user_rpc_user_proto_msgTypes[5]
+	mi := &file_apps_user_rpc_user_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -300,7 +100,7 @@ func (x *GetUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserResponse.ProtoReflect.Descriptor instead.
 func (*GetUserResponse) Descriptor() ([]byte, []int) {
-	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{5}
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetUserResponse) GetId() int64 {
@@ -317,31 +117,231 @@ func (x *GetUserResponse) GetUsername() string {
 	return ""
 }
 
+type GetOrCreateByKratosIdentityRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	KratosIdentityId string                 `protobuf:"bytes,1,opt,name=kratos_identity_id,json=kratosIdentityId,proto3" json:"kratos_identity_id,omitempty"`
+	Username         string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetOrCreateByKratosIdentityRequest) Reset() {
+	*x = GetOrCreateByKratosIdentityRequest{}
+	mi := &file_apps_user_rpc_user_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrCreateByKratosIdentityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrCreateByKratosIdentityRequest) ProtoMessage() {}
+
+func (x *GetOrCreateByKratosIdentityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_user_rpc_user_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrCreateByKratosIdentityRequest.ProtoReflect.Descriptor instead.
+func (*GetOrCreateByKratosIdentityRequest) Descriptor() ([]byte, []int) {
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetOrCreateByKratosIdentityRequest) GetKratosIdentityId() string {
+	if x != nil {
+		return x.KratosIdentityId
+	}
+	return ""
+}
+
+func (x *GetOrCreateByKratosIdentityRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type GetOrCreateByKratosIdentityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOrCreateByKratosIdentityResponse) Reset() {
+	*x = GetOrCreateByKratosIdentityResponse{}
+	mi := &file_apps_user_rpc_user_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOrCreateByKratosIdentityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOrCreateByKratosIdentityResponse) ProtoMessage() {}
+
+func (x *GetOrCreateByKratosIdentityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_user_rpc_user_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOrCreateByKratosIdentityResponse.ProtoReflect.Descriptor instead.
+func (*GetOrCreateByKratosIdentityResponse) Descriptor() ([]byte, []int) {
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetOrCreateByKratosIdentityResponse) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GetOrCreateByKratosIdentityResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type GetByKratosIdentityRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	KratosIdentityId string                 `protobuf:"bytes,1,opt,name=kratos_identity_id,json=kratosIdentityId,proto3" json:"kratos_identity_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetByKratosIdentityRequest) Reset() {
+	*x = GetByKratosIdentityRequest{}
+	mi := &file_apps_user_rpc_user_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetByKratosIdentityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetByKratosIdentityRequest) ProtoMessage() {}
+
+func (x *GetByKratosIdentityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_user_rpc_user_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetByKratosIdentityRequest.ProtoReflect.Descriptor instead.
+func (*GetByKratosIdentityRequest) Descriptor() ([]byte, []int) {
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetByKratosIdentityRequest) GetKratosIdentityId() string {
+	if x != nil {
+		return x.KratosIdentityId
+	}
+	return ""
+}
+
+type GetByKratosIdentityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetByKratosIdentityResponse) Reset() {
+	*x = GetByKratosIdentityResponse{}
+	mi := &file_apps_user_rpc_user_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetByKratosIdentityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetByKratosIdentityResponse) ProtoMessage() {}
+
+func (x *GetByKratosIdentityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_apps_user_rpc_user_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetByKratosIdentityResponse.ProtoReflect.Descriptor instead.
+func (*GetByKratosIdentityResponse) Descriptor() ([]byte, []int) {
+	return file_apps_user_rpc_user_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetByKratosIdentityResponse) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *GetByKratosIdentityResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
 var File_apps_user_rpc_user_proto protoreflect.FileDescriptor
 
 const file_apps_user_rpc_user_proto_rawDesc = "" +
 	"\n" +
-	"\x18apps/user-rpc/user.proto\x12\x04user\"I\n" +
-	"\x0fRegisterRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\">\n" +
-	"\x10RegisterResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername\"F\n" +
-	"\fLoginRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"\x1f\n" +
-	"\rLoginResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\" \n" +
+	"\x18apps/user-rpc/user.proto\x12\x04user\" \n" +
 	"\x0eGetUserRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"=\n" +
 	"\x0fGetUserResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername2\xae\x01\n" +
-	"\aUserRpc\x129\n" +
-	"\bRegister\x12\x15.user.RegisterRequest\x1a\x16.user.RegisterResponse\x120\n" +
-	"\x05Login\x12\x12.user.LoginRequest\x1a\x13.user.LoginResponse\x126\n" +
-	"\aGetUser\x12\x14.user.GetUserRequest\x1a\x15.user.GetUserResponseB\bZ\x06./userb\x06proto3"
+	"\busername\x18\x02 \x01(\tR\busername\"n\n" +
+	"\"GetOrCreateByKratosIdentityRequest\x12,\n" +
+	"\x12kratos_identity_id\x18\x01 \x01(\tR\x10kratosIdentityId\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\"Q\n" +
+	"#GetOrCreateByKratosIdentityResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\"J\n" +
+	"\x1aGetByKratosIdentityRequest\x12,\n" +
+	"\x12kratos_identity_id\x18\x01 \x01(\tR\x10kratosIdentityId\"I\n" +
+	"\x1bGetByKratosIdentityResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername2\x91\x02\n" +
+	"\aUserRpc\x126\n" +
+	"\aGetUser\x12\x14.user.GetUserRequest\x1a\x15.user.GetUserResponse\x12r\n" +
+	"\x1bGetOrCreateByKratosIdentity\x12(.user.GetOrCreateByKratosIdentityRequest\x1a).user.GetOrCreateByKratosIdentityResponse\x12Z\n" +
+	"\x13GetByKratosIdentity\x12 .user.GetByKratosIdentityRequest\x1a!.user.GetByKratosIdentityResponseB\bZ\x06./userb\x06proto3"
 
 var (
 	file_apps_user_rpc_user_proto_rawDescOnce sync.Once
@@ -357,20 +357,20 @@ func file_apps_user_rpc_user_proto_rawDescGZIP() []byte {
 
 var file_apps_user_rpc_user_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_apps_user_rpc_user_proto_goTypes = []any{
-	(*RegisterRequest)(nil),  // 0: user.RegisterRequest
-	(*RegisterResponse)(nil), // 1: user.RegisterResponse
-	(*LoginRequest)(nil),     // 2: user.LoginRequest
-	(*LoginResponse)(nil),    // 3: user.LoginResponse
-	(*GetUserRequest)(nil),   // 4: user.GetUserRequest
-	(*GetUserResponse)(nil),  // 5: user.GetUserResponse
+	(*GetUserRequest)(nil),                      // 0: user.GetUserRequest
+	(*GetUserResponse)(nil),                     // 1: user.GetUserResponse
+	(*GetOrCreateByKratosIdentityRequest)(nil),  // 2: user.GetOrCreateByKratosIdentityRequest
+	(*GetOrCreateByKratosIdentityResponse)(nil), // 3: user.GetOrCreateByKratosIdentityResponse
+	(*GetByKratosIdentityRequest)(nil),          // 4: user.GetByKratosIdentityRequest
+	(*GetByKratosIdentityResponse)(nil),         // 5: user.GetByKratosIdentityResponse
 }
 var file_apps_user_rpc_user_proto_depIdxs = []int32{
-	0, // 0: user.UserRpc.Register:input_type -> user.RegisterRequest
-	2, // 1: user.UserRpc.Login:input_type -> user.LoginRequest
-	4, // 2: user.UserRpc.GetUser:input_type -> user.GetUserRequest
-	1, // 3: user.UserRpc.Register:output_type -> user.RegisterResponse
-	3, // 4: user.UserRpc.Login:output_type -> user.LoginResponse
-	5, // 5: user.UserRpc.GetUser:output_type -> user.GetUserResponse
+	0, // 0: user.UserRpc.GetUser:input_type -> user.GetUserRequest
+	2, // 1: user.UserRpc.GetOrCreateByKratosIdentity:input_type -> user.GetOrCreateByKratosIdentityRequest
+	4, // 2: user.UserRpc.GetByKratosIdentity:input_type -> user.GetByKratosIdentityRequest
+	1, // 3: user.UserRpc.GetUser:output_type -> user.GetUserResponse
+	3, // 4: user.UserRpc.GetOrCreateByKratosIdentity:output_type -> user.GetOrCreateByKratosIdentityResponse
+	5, // 5: user.UserRpc.GetByKratosIdentity:output_type -> user.GetByKratosIdentityResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

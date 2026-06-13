@@ -5,7 +5,9 @@ package order
 
 import (
 	"context"
+	"fmt"
 
+	"go-svc/apps/gateway-api/internal/authctx"
 	"go-svc/apps/gateway-api/internal/svc"
 	"go-svc/apps/gateway-api/internal/types"
 	orderclient "go-svc/apps/order-rpc/orderrpc"
@@ -28,11 +30,21 @@ func NewCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Creat
 	}
 }
 
+// CreateOrder reads user_id from the auth context and forwards to CreateOrderWithUserID.
 func (l *CreateOrderLogic) CreateOrder(req *types.CreateOrderReq) (resp *types.OrderResp, err error) {
+	userID := authctx.UserIDFromContext(l.ctx)
+	if userID == 0 {
+		return nil, fmt.Errorf("user not authenticated")
+	}
+	return l.CreateOrderWithUserID(req.ProductID, req.Quantity, userID)
+}
+
+// CreateOrderWithUserID creates an order with an explicit user_id from auth context.
+func (l *CreateOrderLogic) CreateOrderWithUserID(productID, quantity, userID int64) (resp *types.OrderResp, err error) {
 	rpcResp, err := l.svcCtx.OrderRpc.CreateOrder(traceid.WithOutgoingMetadata(l.ctx), &orderclient.CreateOrderRequest{
-		UserId:    req.UserID,
-		ProductId: req.ProductID,
-		Quantity:  req.Quantity,
+		UserId:    userID,
+		ProductId: productID,
+		Quantity:  quantity,
 	})
 	if err != nil {
 		return nil, err
