@@ -25,6 +25,7 @@ data:
       Sampler: 1.0
       Batcher: otlpgrpc
     Name: gateway-api
+    KratosURL: http://kratos-public:4433
     Host: 0.0.0.0
     Port: 8080
     UserRpcConf:
