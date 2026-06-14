@@ -109,7 +109,7 @@ func (c *Client) InitializeRegistrationFlow(ctx context.Context) (string, error)
 func (c *Client) CompleteRegistrationFlow(ctx context.Context, flowID string, req RegistrationRequest) (*RegisterFlowResponse, error) {
 	body, _ := json.Marshal(req)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		fmt.Sprintf("%s/self-service/registration/api?flow=%s", c.baseURL, flowID),
+		fmt.Sprintf("%s/self-service/registration?flow=%s", c.baseURL, flowID),
 		bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (c *Client) InitializeLoginFlow(ctx context.Context) (string, error) {
 func (c *Client) CompleteLoginFlow(ctx context.Context, flowID string, req LoginRequest) (*LoginFlowResponse, error) {
 	body, _ := json.Marshal(req)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		fmt.Sprintf("%s/self-service/login/api?flow=%s", c.baseURL, flowID),
+		fmt.Sprintf("%s/self-service/login?flow=%s", c.baseURL, flowID),
 		bytes.NewReader(body))
 	if err != nil {
 		return nil, err

@@ -1,7 +1,10 @@
 package kratos
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -95,5 +98,81 @@ func TestClient_NewClient(t *testing.T) {
 	}
 	if client.baseURL != "http://localhost:4433" {
 		t.Fatalf("expected baseURL, got %s", client.baseURL)
+	}
+}
+
+func TestCompleteRegistrationFlow_UsesUpdateFlowEndpoint(t *testing.T) {
+	var gotMethod, gotPath, gotFlow string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotFlow = r.URL.Query().Get("flow")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"id":"flow-1","session_token":"token-1","identity":{"id":"ident-1","traits":{"username":"alice"}}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	req := RegistrationRequest{
+		Traits: struct {
+			Username string `json:"username"`
+		}{Username: "alice"},
+		Password: "123456",
+		Method:   "password",
+	}
+
+	resp, err := client.CompleteRegistrationFlow(context.Background(), "flow-1", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.SessionToken != "token-1" {
+		t.Fatalf("expected token-1, got %q", resp.SessionToken)
+	}
+	if gotMethod != http.MethodPost {
+		t.Fatalf("expected POST, got %s", gotMethod)
+	}
+	if gotPath != "/self-service/registration" {
+		t.Fatalf("expected /self-service/registration, got %s", gotPath)
+	}
+	if gotFlow != "flow-1" {
+		t.Fatalf("expected flow-1, got %s", gotFlow)
+	}
+}
+
+func TestCompleteLoginFlow_UsesUpdateFlowEndpoint(t *testing.T) {
+	var gotMethod, gotPath, gotFlow string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotFlow = r.URL.Query().Get("flow")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"id":"flow-1","session_token":"token-1","identity":{"id":"ident-1","traits":{"username":"alice"}}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	resp, err := client.CompleteLoginFlow(context.Background(), "flow-1", LoginRequest{
+		Identifier: "alice",
+		Password:   "123456",
+		Method:     "password",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.SessionToken != "token-1" {
+		t.Fatalf("expected token-1, got %q", resp.SessionToken)
+	}
+	if gotMethod != http.MethodPost {
+		t.Fatalf("expected POST, got %s", gotMethod)
+	}
+	if gotPath != "/self-service/login" {
+		t.Fatalf("expected /self-service/login, got %s", gotPath)
+	}
+	if gotFlow != "flow-1" {
+		t.Fatalf("expected flow-1, got %s", gotFlow)
 	}
 }
